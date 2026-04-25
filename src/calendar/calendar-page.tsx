@@ -686,14 +686,12 @@ function DayView({
         style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
       >
         <div
-          className="relative"
-          style={{
-            height: GRID_HOURS * HOUR_HEIGHT_DAY,
-            paddingLeft: GUTTER_W,
-          }}
+          className="relative flex"
+          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
         >
-          <HourLines hourHeight={HOUR_HEIGHT_DAY} />
-          <div className="absolute inset-0" style={{ left: GUTTER_W, right: 8 }}>
+          <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
+          <div className="relative flex-1" style={{ paddingRight: 8 }}>
+            <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
             <DayColumnInner
               day={anchor}
               isToday={isToday}
