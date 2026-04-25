@@ -1584,7 +1584,7 @@ function MonthView({
         >
           Less
         </span>
-        {["rgba(240,235,216,0.06)", "rgba(255,130,63,0.10)", "rgba(255,130,63,0.30)", "rgba(255,130,63,1)"].map((c, i) => (
+        {["transparent", "rgba(255,130,63,0.15)", "rgba(255,130,63,0.40)", "rgba(255,130,63,1)"].map((c, i) => (
           <span
             key={i}
             aria-hidden
