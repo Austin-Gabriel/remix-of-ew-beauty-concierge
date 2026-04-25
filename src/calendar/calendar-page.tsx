@@ -905,7 +905,6 @@ function WeekGrid({
   onTapBuffer: (b: TravelBuffer) => void;
   onTapDay: (d: Date) => void;
 }) {
-  void heroDay; // Phase 2 will consume.
   // Active "NOW" booking — only on today, only if time falls inside it.
   const nowBookingId =
     items.find(
@@ -935,6 +934,13 @@ function WeekGrid({
         <div />
         {days.map((d, i) => {
           const isToday = isSameDay(d, today);
+          const isHero = isSameDay(d, heroDay);
+          // Today wins the filled-orange treatment. A non-today hero day
+          // gets a "bagel" ring (orange outline, transparent fill) to mark
+          // it as the focus column without competing with today's signal.
+          const circleBg = isToday ? ORANGE : "transparent";
+          const circleBorder = isHero && !isToday ? `1.5px solid ${ORANGE}` : "none";
+          const circleFg = isToday ? MIDNIGHT : CREAM;
           return (
             <button
               key={i}
@@ -949,7 +955,7 @@ function WeekGrid({
                   fontSize: 9,
                   fontWeight: 600,
                   color: CREAM,
-                  opacity: 0.5,
+                  opacity: isHero ? 0.9 : 0.5,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
                 }}
@@ -964,8 +970,9 @@ function WeekGrid({
                   fontFamily: UI,
                   fontSize: 12.5,
                   fontWeight: 700,
-                  color: isToday ? MIDNIGHT : CREAM,
-                  backgroundColor: isToday ? ORANGE : "transparent",
+                  color: circleFg,
+                  backgroundColor: circleBg,
+                  border: circleBorder,
                   letterSpacing: "-0.01em",
                 }}
               >
@@ -992,27 +999,39 @@ function WeekGrid({
         >
           <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
         </div>
-        {days.map((d, i) => (
-          <div key={i} className="relative min-w-0" style={{ borderLeft: "1px solid rgba(240,235,216,0.06)" }}>
-            <DayColumnInner
-              day={d}
-              isToday={isSameDay(d, today)}
-              isPast={d < startOfDay(today)}
-              availability={availability[d.getDay()] ?? []}
-              items={items.filter((b) => isSameDay(b.startsAt, d))}
-              buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-              blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-              freeSlots={[]}
-              hourHeight={HOUR_HEIGHT_WEEK}
-              compact
-              nowBookingId={nowBookingId}
-              onOpenBooking={onOpenBooking}
-              onTapEmpty={onTapEmpty}
-              onTapBuffer={onTapBuffer}
-              showInlineLabels={false}
-            />
-          </div>
-        ))}
+        {days.map((d, i) => {
+          const isHero = isSameDay(d, heroDay);
+          return (
+            <div
+              key={i}
+              className="relative min-w-0"
+              style={{
+                borderLeft: "1px solid rgba(240,235,216,0.06)",
+                // Subtle wash to lift the hero column without changing its width.
+                backgroundColor: isHero ? "rgba(255,130,63,0.025)" : "transparent",
+              }}
+            >
+              <DayColumnInner
+                day={d}
+                isToday={isSameDay(d, today)}
+                isPast={d < startOfDay(today)}
+                availability={availability[d.getDay()] ?? []}
+                items={items.filter((b) => isSameDay(b.startsAt, d))}
+                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+                freeSlots={[]}
+                hourHeight={HOUR_HEIGHT_WEEK}
+                compact
+                hero={isHero}
+                nowBookingId={nowBookingId}
+                onOpenBooking={onOpenBooking}
+                onTapEmpty={onTapEmpty}
+                onTapBuffer={onTapBuffer}
+                showInlineLabels={isHero}
+              />
+            </div>
+          );
+        })}
         {/* Global NOW line spans all 7 day columns (offset past the gutter). */}
         {todayInWeek ? (
           <div
@@ -1072,6 +1091,7 @@ function DayColumnInner({
   freeSlots,
   hourHeight,
   compact,
+  hero = false,
   nowBookingId,
   onOpenBooking,
   onTapEmpty,
@@ -1088,6 +1108,9 @@ function DayColumnInner({
   freeSlots: FreeSlot[];
   hourHeight: number;
   compact: boolean;
+  /** When true (Week view's highlighted day), bookings render with fuller
+   *  content even within the compact layout. */
+  hero?: boolean;
   nowBookingId: string | null;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
@@ -1179,6 +1202,7 @@ function DayColumnInner({
           isNow={it.id === nowBookingId}
           onTap={() => onOpenBooking(it.id)}
           compact={compact}
+          hero={hero}
           hourHeight={hourHeight}
         />
       ))}
@@ -1222,6 +1246,7 @@ function BookingBlock({
   isNow,
   onTap,
   compact,
+  hero = false,
   hourHeight,
 }: {
   item: CalendarBooking;
@@ -1229,6 +1254,8 @@ function BookingBlock({
   isNow: boolean;
   onTap: () => void;
   compact: boolean;
+  /** Hero column inside Week view — renders fuller content within compact layout. */
+  hero?: boolean;
   hourHeight: number;
 }) {
   const top = pxFor(minutesIntoGrid(item.startsAt), hourHeight);
@@ -1373,43 +1400,44 @@ function BookingBlock({
           ) : null}
         </div>
       ) : (
-        // Compact (Week)
+        // Compact (Week). Hero column gets fuller content; non-hero
+        // abbreviates to keep the seven columns scannable.
         <>
           <div
             className="truncate"
             style={{
               fontFamily: UI,
-              fontSize: 10.5,
+              fontSize: hero ? 11.5 : 10.5,
               fontWeight: 700,
               letterSpacing: "-0.01em",
               lineHeight: 1.15,
               paddingRight: item.isOnDemand ? 10 : 0,
             }}
           >
-            {item.clientFirst}
+            {hero ? item.clientFirst : (item.clientFirst[0] ?? "") + "."}
           </div>
           {h >= 30 ? (
             <div
               className="truncate"
               style={{
                 fontFamily: UI,
-                fontSize: 9.5,
+                fontSize: hero ? 10 : 9.5,
                 fontWeight: 500,
-                opacity: 0.7,
+                opacity: hero ? 0.85 : 0.65,
                 lineHeight: 1.15,
                 marginTop: 1,
               }}
             >
-              {item.service}
+              {hero ? item.service : abbrevService(item.service)}
             </div>
           ) : null}
-          {h >= 50 ? (
+          {(hero ? h >= 36 : h >= 50) ? (
             <div
               className="truncate"
               style={{
                 fontFamily: UI,
-                fontSize: 9,
-                opacity: 0.55,
+                fontSize: hero ? 9.5 : 9,
+                opacity: hero ? 0.7 : 0.55,
                 marginTop: 2,
                 fontVariantNumeric: "tabular-nums",
               }}
@@ -1429,6 +1457,15 @@ function durationPill(min: number): string {
   const m = min % 60;
   if (m === 0) return `${h}h`;
   return `${h}h${m}`;
+}
+
+/** Compact service label for non-hero week columns. Keeps the first word
+ *  (or the first 8 chars + ellipsis) so the column still communicates
+ *  "what kind of booking" without dominating the block. */
+function abbrevService(s: string): string {
+  const head = s.split(/[—–·\-,]/)[0]?.trim() ?? s;
+  if (head.length <= 10) return head;
+  return head.slice(0, 9).trimEnd() + "…";
 }
 
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
@@ -1491,20 +1528,26 @@ function BufferBlock({
         height: h,
         left: 2,
         right: 2,
-        borderRadius: 4,
-        backgroundColor: "rgba(240,235,216,0.05)",
-        border: "1px solid rgba(240,235,216,0.10)",
+        borderRadius: 6,
+        // Buffer is committed time. Distinct from "open" (transparent warm
+        // band) and from "blocked" (dark hatched). We give it a soft orange
+        // wash with a faint diagonal weave so it reads as "occupied, soft"
+        // — clearly not bookable, clearly not a hard block.
+        backgroundColor: "rgba(255,130,63,0.10)",
+        backgroundImage:
+          "repeating-linear-gradient(135deg, rgba(255,130,63,0.14) 0 3px, transparent 3px 7px)",
+        border: "1px dashed rgba(255,130,63,0.35)",
         color: CREAM,
         padding: compact ? "0 4px" : "2px 6px",
         fontFamily: UI,
         fontSize: compact ? 8.5 : 10,
-        fontWeight: 500,
+        fontWeight: 600,
         letterSpacing: "-0.005em",
-        opacity: 0.7,
+        opacity: 0.95,
       }}
     >
       {showInlineLabel ? (
-        <span className="truncate">
+        <span className="truncate" style={{ opacity: 0.85 }}>
           Travel · {buffer.minutes} min · {buffer.miles} mi
         </span>
       ) : null}
@@ -1590,19 +1633,31 @@ function MonthView({
   const gridStart = startOfWeek(monthStart);
   const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
 
-  // Aggregate booking counts per day across the visible weeks.
-  const counts = useMemo(() => {
-    const map = new Map<string, number>();
+  // Aggregate booking counts per day across the visible weeks. We also
+  // build a parallel "density score" that includes travel-buffer time so a
+  // day with five bookings + lots of inter-booking travel reads denser than
+  // five back-to-back bookings with no travel between them.
+  const { counts, density: densityMap } = useMemo(() => {
+    const cMap = new Map<string, number>();
+    const dMap = new Map<string, number>();
     const weekStarts = new Set<number>();
     cells.forEach((d) => weekStarts.add(startOfWeek(d).getTime()));
     weekStarts.forEach((ts) => {
       const items = bookingsForWeek(new Date(ts), density);
+      const buffers = travelBuffersFor(items);
       items.forEach((b) => {
         const key = startOfDay(b.startsAt).getTime().toString();
-        map.set(key, (map.get(key) ?? 0) + 1);
+        cMap.set(key, (cMap.get(key) ?? 0) + 1);
+        // 1 unit per booking baseline.
+        dMap.set(key, (dMap.get(key) ?? 0) + 1);
+      });
+      buffers.forEach((b) => {
+        const key = startOfDay(b.startsAt).getTime().toString();
+        // Each ~30 min of travel buffer contributes 0.5 to density.
+        dMap.set(key, (dMap.get(key) ?? 0) + b.minutes / 60);
       });
     });
-    return map;
+    return { counts: cMap, density: dMap };
   }, [cells, density]);
 
   // Stats for the month proper (not the visible 6 weeks).
@@ -1662,8 +1717,9 @@ function MonthView({
           const isToday = isSameDay(d, today);
           const key = startOfDay(d).getTime().toString();
           const count = counts.get(key) ?? 0;
-          // Heat tier: 0 → none, 1 → light, 2-3 → medium, 4+ → full.
-          const tier = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
+          const score = densityMap.get(key) ?? 0;
+          // Heat tier blends booking count with buffer-time load.
+          const tier = score === 0 ? 0 : score < 1.6 ? 1 : score < 3.5 ? 2 : 3;
           const tints = [
             "transparent",
             "rgba(255,130,63,0.15)",
