@@ -1633,19 +1633,31 @@ function MonthView({
   const gridStart = startOfWeek(monthStart);
   const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
 
-  // Aggregate booking counts per day across the visible weeks.
-  const counts = useMemo(() => {
-    const map = new Map<string, number>();
+  // Aggregate booking counts per day across the visible weeks. We also
+  // build a parallel "density score" that includes travel-buffer time so a
+  // day with five bookings + lots of inter-booking travel reads denser than
+  // five back-to-back bookings with no travel between them.
+  const { counts, density: densityMap } = useMemo(() => {
+    const cMap = new Map<string, number>();
+    const dMap = new Map<string, number>();
     const weekStarts = new Set<number>();
     cells.forEach((d) => weekStarts.add(startOfWeek(d).getTime()));
     weekStarts.forEach((ts) => {
       const items = bookingsForWeek(new Date(ts), density);
+      const buffers = travelBuffersFor(items);
       items.forEach((b) => {
         const key = startOfDay(b.startsAt).getTime().toString();
-        map.set(key, (map.get(key) ?? 0) + 1);
+        cMap.set(key, (cMap.get(key) ?? 0) + 1);
+        // 1 unit per booking baseline.
+        dMap.set(key, (dMap.get(key) ?? 0) + 1);
+      });
+      buffers.forEach((b) => {
+        const key = startOfDay(b.startsAt).getTime().toString();
+        // Each ~30 min of travel buffer contributes 0.5 to density.
+        dMap.set(key, (dMap.get(key) ?? 0) + b.minutes / 60);
       });
     });
-    return map;
+    return { counts: cMap, density: dMap };
   }, [cells, density]);
 
   // Stats for the month proper (not the visible 6 weeks).
