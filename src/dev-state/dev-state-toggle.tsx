@@ -278,6 +278,30 @@ export function DevStateToggle() {
                 onChange={(v) => setDataDensity(v as DevDataDensity)}
               />
               <Group
+                title="Calendar view"
+                value={state.calendarView}
+                options={CALENDAR_VIEWS}
+                onChange={(v) => setCalendarView(v as DevCalendarView)}
+              />
+              <Group
+                title="Week density (calendar)"
+                value={state.weekDensity}
+                options={WEEK_DENSITIES}
+                onChange={(v) => setWeekDensity(v as DevWeekDensity)}
+              />
+              <Group
+                title="Blocked time (calendar)"
+                value={state.blockedTime}
+                options={BLOCKED_TIMES}
+                onChange={(v) => setBlockedTime(v as DevBlockedTime)}
+              />
+              <Group
+                title="Availability (calendar)"
+                value={state.availability}
+                options={AVAILABILITIES}
+                onChange={(v) => setAvailability(v as DevAvailability)}
+              />
+              <Group
                 title="Theme override"
                 value={state.theme}
                 options={THEMES.map((t) => ({ ...t, hint: "" }))}
