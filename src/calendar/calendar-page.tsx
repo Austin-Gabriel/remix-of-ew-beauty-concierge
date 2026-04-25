@@ -855,7 +855,8 @@ function WeekView({
   heroDay: Date;
   onHeroDayChange: (d: Date) => void;
   onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
+  onTapEmpty: (start: Date, presetMinutes?: number) => void;
+  onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
 }) {
   const wkStart = startOfWeek(anchor);
@@ -929,7 +930,8 @@ function WeekGrid({
    *  column width"). */
   heroDay: Date;
   onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
+  onTapEmpty: (start: Date, presetMinutes?: number) => void;
+  onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
   onTapDay: (d: Date) => void;
 }) {
@@ -1141,7 +1143,8 @@ function DayColumnInner({
   hero?: boolean;
   nowBookingId: string | null;
   onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
+  onTapEmpty: (start: Date, presetMinutes?: number) => void;
+  onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
   showInlineLabels: boolean;
 }) {
