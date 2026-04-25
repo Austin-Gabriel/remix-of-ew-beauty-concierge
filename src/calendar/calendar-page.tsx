@@ -905,7 +905,6 @@ function WeekGrid({
   onTapBuffer: (b: TravelBuffer) => void;
   onTapDay: (d: Date) => void;
 }) {
-  void heroDay; // Phase 2 will consume.
   // Active "NOW" booking — only on today, only if time falls inside it.
   const nowBookingId =
     items.find(
