@@ -877,6 +877,7 @@ function WeekView({
   const days = weekDays(wkStart);
   const today = new Date();
   void density;
+  void availability;
   const items = useMemo(() => realBookingsForWeek(wkStart), [wkStart]);
   const baseBuffers = useMemo(() => travelBuffersFor(items), [items]);
   const seeded = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
@@ -892,214 +893,269 @@ function WeekView({
       }),
     [baseBuffers, bufferExtensions],
   );
-  const stats = statsForRange(items, wkStart, addDays(wkStart, 7), availability);
 
-  const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
+  // Per spec: stat strip reflects the SELECTED day, not the whole week.
+  const dayItems = useMemo(
+    () => items.filter((b) => isSameDay(b.startsAt, heroDay)),
+    [items, heroDay],
+  );
+  const dayStats = statsForDay(dayItems, today);
+
+  // The header dropdown label still shows the selected day (Booksy-style):
+  // "Today" if it's today, otherwise the weekday name.
+  const isHeroToday = isSameDay(heroDay, today);
+  const navLabel = isHeroToday
+    ? "Today"
+    : heroDay.toLocaleDateString(undefined, { weekday: "long" });
 
   return (
     <div className="flex flex-1 flex-col">
       <DateNavRow
-        label={rangeLabel}
-        onPrev={() => onAnchorChange(addDays(anchor, -7))}
-        onNext={() => onAnchorChange(addDays(anchor, 7))}
+        label={navLabel}
+        onPrev={() => {
+          // Prev/next move by a single day so the user can step through.
+          const prev = addDays(heroDay, -1);
+          onHeroDayChange(prev);
+          if (!isSameDay(startOfWeek(prev), wkStart)) onAnchorChange(prev);
+        }}
+        onNext={() => {
+          const next = addDays(heroDay, 1);
+          onHeroDayChange(next);
+          if (!isSameDay(startOfWeek(next), wkStart)) onAnchorChange(next);
+        }}
         view={view}
         onViewChange={onViewChange}
       />
       <StatStrip
         cols={[
-          { value: String(stats.count), label: "Bookings" },
-          { value: fmtUsd(stats.earnedUsd), label: "Earned" },
-          { value: `${stats.bookedPct}%`, label: "Booked", valueAccent: true },
+          {
+            value: dayStats.nextUpAt ? fmtTimeShort(dayStats.nextUpAt) : "—",
+            label: "Next up",
+            valueAccent: true,
+          },
+          { value: String(dayStats.count), label: "Bookings" },
+          { value: fmtUsd(dayStats.earnedUsd), label: "Expected" },
         ]}
       />
 
-      <WeekGrid
+      <WeekStripAndDay
         days={days}
         today={today}
+        heroDay={heroDay}
         items={items}
         buffers={buffers}
         blocks={blocks}
         availability={availability}
-        heroDay={heroDay}
+        blockedPreset={blockedPreset}
+        onAnchorChange={onAnchorChange}
+        onHeroDayChange={onHeroDayChange}
         onOpenBooking={onOpenBooking}
         onTapEmpty={onTapEmpty}
         onTapBlock={onTapBlock}
         onTapBuffer={onTapBuffer}
-        onTapDay={onHeroDayChange}
       />
     </div>
   );
 }
 
-/* Single locked CSS-grid: gutter + 7 day columns share one column system,
-   so the day-header row and time grid below are perfectly aligned. */
-function WeekGrid({
+/**
+ * New Week layout (Booksy-style):
+ *   Top  — horizontal week strip (S 19, M 20, T 21, …) with bagel-circle
+ *          highlight on the selected day. Swipe left/right paginates by week.
+ *   Body — single-day vertical grid of the selected day, full-width cards.
+ *
+ * The seven-column grid is gone for phone widths. Density is moved to the
+ * day strip; the body shows one day at a time so each card stays readable.
+ */
+function WeekStripAndDay({
   days,
   today,
+  heroDay,
   items,
   buffers,
   blocks,
   availability,
-  heroDay,
+  blockedPreset,
+  onAnchorChange,
+  onHeroDayChange,
   onOpenBooking,
   onTapEmpty,
   onTapBlock,
   onTapBuffer,
-  onTapDay,
 }: {
   days: Date[];
   today: Date;
+  heroDay: Date;
   items: CalendarBooking[];
   buffers: TravelBuffer[];
   blocks: BlockedSlot[];
   availability: AvailabilityWeek;
-  /** Highlighted day inside the week. Phase 1: prop wired only; Phase 2 will
-   *  drive density/content per spec ("hero through information density, not
-   *  column width"). */
-  heroDay: Date;
+  blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
+  onAnchorChange: (d: Date) => void;
+  onHeroDayChange: (d: Date) => void;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date, presetMinutes?: number) => void;
   onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
-  onTapDay: (d: Date) => void;
 }) {
-  // Active "NOW" booking — only on today, only if time falls inside it.
-  const nowBookingId =
-    items.find(
-      (b) =>
-        isSameDay(b.startsAt, today) &&
-        today >= b.startsAt &&
-        today < new Date(b.startsAt.getTime() + b.durationMin * 60_000),
-    )?.id ?? null;
+  void blockedPreset;
+  const dayAv = availability[heroDay.getDay()] ?? [];
+  const dayItems = useMemo(
+    () => items.filter((b) => isSameDay(b.startsAt, heroDay)),
+    [items, heroDay],
+  );
+  const dayBuffers = useMemo(
+    () => buffers.filter((b) => isSameDay(b.startsAt, heroDay)),
+    [buffers, heroDay],
+  );
+  const dayBlocks = useMemo(
+    () => blocks.filter((b) => isSameDay(b.startsAt, heroDay)),
+    [blocks, heroDay],
+  );
+  const free = useMemo(
+    () => freeSlotsFor(heroDay, dayItems, dayBuffers, dayBlocks, dayAv),
+    [heroDay, dayItems, dayBuffers, dayBlocks, dayAv],
+  );
+  const isHeroToday = isSameDay(heroDay, today);
+  const isPast = heroDay < startOfDay(today);
 
-  const gridTemplate = `${GUTTER_W}px repeat(7, minmax(0, 1fr))`;
-  const todayInWeek = days.some((d) => isSameDay(d, today));
+  // Active "NOW" booking — only on today, only if time falls inside it.
+  const nowBookingId = isHeroToday
+    ? dayItems.find(
+        (b) =>
+          today >= b.startsAt &&
+          today < new Date(b.startsAt.getTime() + b.durationMin * 60_000),
+      )?.id ?? null
+    : null;
+
+  // Horizontal swipe on the week strip paginates weeks.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const swipeRef = useRef<{ x: number; y: number; locked: boolean } | null>(null);
 
   return (
-    <div
-      className="relative flex-1 overflow-y-auto overflow-x-hidden"
-      style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
-    >
-      {/* Sticky day-header row — same column system as the body grid below. */}
+    <div className="flex flex-1 flex-col">
+      {/* WEEK STRIP — seven day cells, swipe to advance week */}
       <div
-        className="sticky top-0 z-20 grid"
+        ref={stripRef}
+        className="px-3 pb-2 pt-1"
         style={{
-          gridTemplateColumns: gridTemplate,
-          backgroundColor: NAVY_PANEL,
-          borderBottom: "1px solid rgba(240,235,216,0.10)",
+          borderBottom: "1px solid rgba(240,235,216,0.08)",
+          touchAction: "pan-y",
+        }}
+        onPointerDown={(e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          swipeRef.current = { x: e.clientX, y: e.clientY, locked: false };
+        }}
+        onPointerMove={(e) => {
+          const s = swipeRef.current;
+          if (!s) return;
+          const dx = e.clientX - s.x;
+          const dy = e.clientY - s.y;
+          if (!s.locked && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+            s.locked = true;
+          }
+        }}
+        onPointerUp={(e) => {
+          const s = swipeRef.current;
+          swipeRef.current = null;
+          if (!s) return;
+          const dx = e.clientX - s.x;
+          if (Math.abs(dx) >= 48) {
+            // Advance week — preserve the same weekday selection so
+            // "Tuesday → swipe → Tuesday next week" feels predictable.
+            const delta = dx < 0 ? 7 : -7;
+            const nextHero = addDays(heroDay, delta);
+            onHeroDayChange(nextHero);
+            onAnchorChange(nextHero);
+          }
         }}
       >
-        <div />
-        {days.map((d, i) => {
-          const isToday = isSameDay(d, today);
-          const isHero = isSameDay(d, heroDay);
-          // Today wins the filled-orange treatment. A non-today hero day
-          // gets a "bagel" ring (orange outline, transparent fill) to mark
-          // it as the focus column without competing with today's signal.
-          const circleBg = isToday ? ORANGE : "transparent";
-          const circleBorder = isHero && !isToday ? `1.5px solid ${ORANGE}` : "none";
-          const circleFg = isToday ? MIDNIGHT : CREAM;
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onTapDay(d)}
-              className="flex min-w-0 flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
-              style={{ border: "none", background: "transparent" }}
-            >
-              <span
-                style={{
-                  fontFamily: UI,
-                  fontSize: 9,
-                  fontWeight: 600,
-                  color: CREAM,
-                  opacity: isHero ? 0.9 : 0.5,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d, i) => {
+            const isToday = isSameDay(d, today);
+            const isHero = isSameDay(d, heroDay);
+            // Selected day wins the filled-orange bagel. Today (when not
+            // selected) gets a subtle ring accent so the pro can still spot it.
+            const circleBg = isHero ? ORANGE : "transparent";
+            const circleBorder =
+              isToday && !isHero ? `1.5px solid ${ORANGE}` : "1px solid transparent";
+            const circleFg = isHero ? MIDNIGHT : CREAM;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onHeroDayChange(d)}
+                className="flex min-w-0 flex-col items-center justify-center py-1.5 transition-opacity active:opacity-70"
+                style={{ border: "none", background: "transparent" }}
               >
-                {dayInitial(i)}
-              </span>
-              <span
-                className="mt-1 flex items-center justify-center rounded-full"
-                style={{
-                  width: 24,
-                  height: 24,
-                  fontFamily: UI,
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: circleFg,
-                  backgroundColor: circleBg,
-                  border: circleBorder,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {d.getDate()}
-              </span>
-            </button>
-          );
-        })}
+                <span
+                  style={{
+                    fontFamily: UI,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: CREAM,
+                    opacity: isHero ? 0.95 : 0.5,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {dayInitial(i)}
+                </span>
+                <span
+                  className="mt-1 flex items-center justify-center rounded-full"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: circleFg,
+                    backgroundColor: circleBg,
+                    border: circleBorder,
+                    letterSpacing: "-0.01em",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {d.getDate()}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Body — same grid template, so columns line up exactly under headers. */}
+      {/* SINGLE-DAY VERTICAL GRID — full-width readable cards */}
       <div
-        className="relative grid"
-        style={{
-          gridTemplateColumns: gridTemplate,
-          height: GRID_HOURS * HOUR_HEIGHT_WEEK,
-        }}
+        className="relative flex-1 overflow-y-auto"
+        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
       >
-        <HourGutter hourHeight={HOUR_HEIGHT_WEEK} />
-        {/* Hour lines span the 7 day columns only (not the gutter). */}
         <div
-          className="pointer-events-none absolute top-0 bottom-0 z-0"
-          style={{ left: GUTTER_W, right: 0 }}
+          className="relative flex"
+          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
         >
-          <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
-        </div>
-        {days.map((d, i) => {
-          const isHero = isSameDay(d, heroDay);
-          return (
-            <div
-              key={i}
-              className="relative min-w-0"
-              style={{
-                borderLeft: "1px solid rgba(240,235,216,0.06)",
-                // Subtle wash to lift the hero column without changing its width.
-                backgroundColor: isHero ? "rgba(255,130,63,0.025)" : "transparent",
-              }}
-            >
-              <DayColumnInner
-                day={d}
-                isToday={isSameDay(d, today)}
-                isPast={d < startOfDay(today)}
-                availability={availability[d.getDay()] ?? []}
-                items={items.filter((b) => isSameDay(b.startsAt, d))}
-                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-                freeSlots={[]}
-                hourHeight={HOUR_HEIGHT_WEEK}
-                compact
-                hero={isHero}
-                nowBookingId={nowBookingId}
-                onOpenBooking={onOpenBooking}
-                onTapEmpty={onTapEmpty}
-                onTapBlock={onTapBlock}
-                onTapBuffer={onTapBuffer}
-                showInlineLabels={isHero}
-              />
-            </div>
-          );
-        })}
-        {/* Global NOW line spans all 7 day columns (offset past the gutter). */}
-        {todayInWeek ? (
-          <div
-            className="pointer-events-none absolute z-10"
-            style={{ left: GUTTER_W, right: 0, top: 0, bottom: 0 }}
-          >
-            <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
+          <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
+          <div className="relative flex-1" style={{ paddingRight: 8 }}>
+            <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
+            <DayColumnInner
+              day={heroDay}
+              isToday={isHeroToday}
+              isPast={isPast}
+              availability={dayAv}
+              items={dayItems}
+              buffers={dayBuffers}
+              blocks={dayBlocks}
+              freeSlots={free}
+              hourHeight={HOUR_HEIGHT_DAY}
+              compact={false}
+              nowBookingId={nowBookingId}
+              onOpenBooking={onOpenBooking}
+              onTapEmpty={onTapEmpty}
+              onTapBlock={onTapBlock}
+              onTapBuffer={onTapBuffer}
+              showInlineLabels
+            />
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );
