@@ -949,7 +949,7 @@ function DayColumnInner({
 }) {
   return (
     <div
-      className="relative"
+      className="absolute inset-0"
       style={{
         borderLeft: compact ? "1px solid rgba(240,235,216,0.06)" : "none",
       }}
