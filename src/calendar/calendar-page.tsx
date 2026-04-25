@@ -884,6 +884,7 @@ function WeekGrid({
   buffers,
   blocks,
   availability,
+  heroDay,
   onOpenBooking,
   onTapEmpty,
   onTapBuffer,
@@ -895,11 +896,16 @@ function WeekGrid({
   buffers: TravelBuffer[];
   blocks: BlockedSlot[];
   availability: AvailabilityWeek;
+  /** Highlighted day inside the week. Phase 1: prop wired only; Phase 2 will
+   *  drive density/content per spec ("hero through information density, not
+   *  column width"). */
+  heroDay: Date;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
   onTapBuffer: (b: TravelBuffer) => void;
   onTapDay: (d: Date) => void;
 }) {
+  void heroDay; // Phase 2 will consume.
   // Active "NOW" booking — only on today, only if time falls inside it.
   const nowBookingId =
     items.find(
