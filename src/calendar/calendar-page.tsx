@@ -1021,7 +1021,8 @@ function WeekGrid({
                 blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
                 freeSlots={[]}
                 hourHeight={HOUR_HEIGHT_WEEK}
-                compact={!isHero}
+                compact
+                hero={isHero}
                 nowBookingId={nowBookingId}
                 onOpenBooking={onOpenBooking}
                 onTapEmpty={onTapEmpty}
