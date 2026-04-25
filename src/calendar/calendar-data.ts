@@ -309,14 +309,17 @@ function densityShape(density: DevWeekDensity): number[] {
   }
 }
 
-export function bookingsForWeek(
-  weekStart: Date,
-  density: DevWeekDensity,
-): CalendarBooking[] {
+/**
+ * CANONICAL booking source for Calendar surfaces. Reads ONLY from
+ * /src/data/mock-bookings.ts so Calendar and Bookings can never disagree.
+ *
+ * The dev-state density preset does NOT add bookings here. To get extra
+ * "ghost" bookings for Month heatmap padding, use `densityPaddingForWeek`
+ * separately and combine ONLY for tint computation — never for stats.
+ */
+export function realBookingsForWeek(weekStart: Date): CalendarBooking[] {
   const weekEnd = addDays(weekStart, 7);
-
-  // Always include real bookings that fall in this week.
-  const real: CalendarBooking[] = [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
+  return [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
     .filter((b) => b.startsAt >= weekStart && b.startsAt < weekEnd)
     .map((b) => ({
       id: b.id,
@@ -327,11 +330,22 @@ export function bookingsForWeek(
       neighborhood: b.neighborhood,
       isOnDemand: false,
       priceUsd: b.priceUsd,
-    }));
+    }))
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+}
 
-  if (density === "empty") return [];
-  if (density === "auto") return real.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+/**
+ * Synthesized "ghost" bookings used ONLY for Month view density tints.
+ * Never rendered, never counted in stats, never bookable. Lets a designer
+ * preview a denser heatmap without polluting the canonical mock data.
+ */
+export function densityPaddingForWeek(
+  weekStart: Date,
+  density: DevWeekDensity,
+): CalendarBooking[] {
+  if (density === "empty" || density === "auto") return [];
 
+  const real = realBookingsForWeek(weekStart);
   const shape = densityShape(density);
   const r = rng(Math.floor(weekStart.getTime() / 86400000));
   const synthesized: CalendarBooking[] = [];
@@ -341,22 +355,18 @@ export function bookingsForWeek(
     const target = shape[dayIdx];
     if (target === 0) continue;
 
-    // Existing real bookings on this day count toward the target.
     const realOnDay = real.filter((b) => isSameDay(b.startsAt, day)).length;
     const need = Math.max(0, target - realOnDay);
 
-    // Lay them out across 9 AM → 7 PM with realistic gaps.
-    let cursorMin = 9 * 60 + Math.floor(r() * 45); // start ~9–9:45
+    let cursorMin = 9 * 60 + Math.floor(r() * 45);
     for (let i = 0; i < need; i++) {
       const svcIdx = Math.floor(r() * CANONICAL_SERVICES.length);
       const svc = CANONICAL_SERVICES[svcIdx];
-      // Slightly compress duration in packed mode so they all fit.
       const baseDur = SERVICE_DURATIONS[svc];
       const dur = density === "packed" ? Math.min(baseDur, 90) : baseDur;
       if (cursorMin + dur > 21 * 60) break;
       const startsAt = new Date(day);
       startsAt.setHours(0, Math.round(cursorMin / 15) * 15, 0, 0);
-      const isOnDemand = r() < 0.18;
       synthesized.push({
         id: `synth-${weekStart.getTime()}-${dayIdx}-${i}`,
         clientFirst: FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)],
@@ -364,7 +374,7 @@ export function bookingsForWeek(
         startsAt,
         durationMin: dur,
         neighborhood: NEIGHBORHOODS[Math.floor(r() * NEIGHBORHOODS.length)],
-        isOnDemand,
+        isOnDemand: r() < 0.18,
         priceUsd: SERVICE_PRICES[svc],
       });
       const travelGap = density === "packed"
@@ -373,10 +383,21 @@ export function bookingsForWeek(
       cursorMin += dur + travelGap;
     }
   }
+  return synthesized;
+}
 
-  return [...real, ...synthesized].sort(
-    (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
-  );
+/**
+ * @deprecated Use `realBookingsForWeek` for stats/rendering and
+ * `densityPaddingForWeek` for Month tints. Kept temporarily as alias to
+ * the canonical source so callers that haven't migrated still render
+ * correct numbers.
+ */
+export function bookingsForWeek(
+  weekStart: Date,
+  _density: DevWeekDensity,
+): CalendarBooking[] {
+  void _density;
+  return realBookingsForWeek(weekStart);
 }
 
 /* ---------- Aggregates for stat strips ---------- */
