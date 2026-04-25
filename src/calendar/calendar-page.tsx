@@ -783,8 +783,6 @@ function WeekView({
         ]}
       />
 
-      {/* Compute "NOW" booking across the whole week (only one can be active). */}
-      {(() => null)()}
       <WeekGrid
         days={days}
         today={today}
