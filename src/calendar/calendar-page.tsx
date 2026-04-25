@@ -104,8 +104,13 @@ function CalendarPageInner() {
   const [heroDay, setHeroDay] = useState<Date>(() => new Date());
   const [overflowOpen, setOverflowOpen] = useState(false);
 
-  // Sheets
-  const [blockSheet, setBlockSheet] = useState<{ start: Date } | null>(null);
+  // Sheets. blockSheet has two modes: "create" (start time + optional
+  // pre-filled duration from a drag) or "edit" (existing block id).
+  const [blockSheet, setBlockSheet] = useState<
+    | { mode: "create"; start: Date; presetMinutes?: number }
+    | { mode: "edit"; blockId: string }
+    | null
+  >(null);
   const [bufferSheet, setBufferSheet] = useState<TravelBuffer | null>(null);
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
