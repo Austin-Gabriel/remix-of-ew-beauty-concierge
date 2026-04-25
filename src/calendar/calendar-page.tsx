@@ -1459,6 +1459,15 @@ function durationPill(min: number): string {
   return `${h}h${m}`;
 }
 
+/** Compact service label for non-hero week columns. Keeps the first word
+ *  (or the first 8 chars + ellipsis) so the column still communicates
+ *  "what kind of booking" without dominating the block. */
+function abbrevService(s: string): string {
+  const head = s.split(/[—–·\-,]/)[0]?.trim() ?? s;
+  if (head.length <= 10) return head;
+  return head.slice(0, 9).trimEnd() + "…";
+}
+
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
   const top = pxFor(minutesIntoGrid(slot.startsAt), hourHeight);
   const h = Math.max(
