@@ -66,6 +66,19 @@ export type DevAvailability =
   | "weekend-warrior"
   | "limited";
 
+/**
+ * Edited availability override. When present, completely supersedes the
+ * `availability` preset. Shape mirrors `AvailabilityWeek` from
+ * /src/calendar/calendar-data.ts (kept JSON-shaped here to avoid cross-domain
+ * type imports — the calendar layer narrows it on read).
+ *
+ * Keys are 0=Sun … 6=Sat. Empty array = day off.
+ */
+export type DevAvailabilityOverride = Record<
+  number,
+  { startMin: number; endMin: number }[]
+>;
+
 export interface DevState {
   proState: DevProState;
   dataDensity: DevDataDensity;
@@ -77,6 +90,7 @@ export interface DevState {
   weekDensity: DevWeekDensity;
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
+  availabilityOverride: DevAvailabilityOverride | null;
 }
 
 const DEFAULT_STATE: DevState = {
