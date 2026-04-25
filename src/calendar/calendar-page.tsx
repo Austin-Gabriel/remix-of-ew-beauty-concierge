@@ -767,104 +767,96 @@ function WeekView({
       />
 
       <div
-        className="relative flex-1 overflow-y-auto"
+        className="relative flex-1 overflow-y-auto overflow-x-hidden"
         style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
       >
         {/* Sticky day headers */}
         <div
-          className="sticky top-0 z-20 grid"
+          className="sticky top-0 z-20 flex"
           style={{
-            gridTemplateColumns: `${GUTTER_W}px repeat(7, minmax(0, 1fr))`,
             backgroundColor: NAVY_PANEL,
             borderBottom: "1px solid rgba(240,235,216,0.10)",
           }}
         >
-          <div />
-          {days.map((d, i) => {
-            const isToday = isSameDay(d, today);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onTapDay(d)}
-                className="flex flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
-                style={{ border: "none", background: "transparent" }}
-              >
-                <span
-                  style={{
-                    fontFamily: UI,
-                    fontSize: 9,
-                    fontWeight: 600,
-                    color: CREAM,
-                    opacity: 0.5,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
+          <div style={{ width: GUTTER_W, flexShrink: 0 }} />
+          <div className="flex flex-1">
+            {days.map((d, i) => {
+              const isToday = isSameDay(d, today);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onTapDay(d)}
+                  className="flex flex-1 flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
+                  style={{ border: "none", background: "transparent", minWidth: 0 }}
                 >
-                  {dayInitial(i)}
-                </span>
-                <span
-                  className="mt-1 flex items-center justify-center rounded-full"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    fontFamily: UI,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    color: isToday ? MIDNIGHT : CREAM,
-                    backgroundColor: isToday ? ORANGE : "transparent",
-                    border: isToday ? "none" : "1px solid transparent",
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {d.getDate()}
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: CREAM,
+                      opacity: 0.5,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {dayInitial(i)}
+                  </span>
+                  <span
+                    className="mt-1 flex items-center justify-center rounded-full"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      fontFamily: UI,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: isToday ? MIDNIGHT : CREAM,
+                      backgroundColor: isToday ? ORANGE : "transparent",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {d.getDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div
-          className="relative"
-          style={{
-            height: GRID_HOURS * HOUR_HEIGHT_WEEK,
-            paddingLeft: GUTTER_W,
-          }}
+          className="relative flex"
+          style={{ height: GRID_HOURS * HOUR_HEIGHT_WEEK }}
         >
-          <HourLines hourHeight={HOUR_HEIGHT_WEEK} />
-          <div
-            className="absolute inset-0"
-            style={{
-              left: GUTTER_W,
-              display: "grid",
-              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-            }}
-          >
+          <HourGutter hourHeight={HOUR_HEIGHT_WEEK} />
+          <div className="relative flex flex-1">
+            <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
             {days.map((d, i) => (
-              <DayColumnInner
-                key={i}
-                day={d}
-                isToday={isSameDay(d, today)}
-                isPast={d < startOfDay(today)}
-                availability={availability[d.getDay()] ?? []}
-                items={items.filter((b) => isSameDay(b.startsAt, d))}
-                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-                freeSlots={[]}
-                hourHeight={HOUR_HEIGHT_WEEK}
-                compact
-                nowBookingId={null}
-                onOpenBooking={onOpenBooking}
-                onTapEmpty={onTapEmpty}
-                onTapBuffer={onTapBuffer}
-                showInlineLabels={false}
-              />
+              <div key={i} className="relative flex-1" style={{ minWidth: 0 }}>
+                <DayColumnInner
+                  day={d}
+                  isToday={isSameDay(d, today)}
+                  isPast={d < startOfDay(today)}
+                  availability={availability[d.getDay()] ?? []}
+                  items={items.filter((b) => isSameDay(b.startsAt, d))}
+                  buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+                  blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+                  freeSlots={[]}
+                  hourHeight={HOUR_HEIGHT_WEEK}
+                  compact
+                  nowBookingId={null}
+                  onOpenBooking={onOpenBooking}
+                  onTapEmpty={onTapEmpty}
+                  onTapBuffer={onTapBuffer}
+                  showInlineLabels={false}
+                />
+              </div>
             ))}
+            {/* Global NOW line — only when today is in the visible week. */}
+            {days.some((d) => isSameDay(d, today)) ? (
+              <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
+            ) : null}
           </div>
-          {/* Global NOW line — only when today is in the visible week. */}
-          {days.some((d) => isSameDay(d, today)) ? (
-            <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
-          ) : null}
         </div>
       </div>
     </div>
