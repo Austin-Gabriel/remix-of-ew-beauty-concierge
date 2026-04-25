@@ -1227,7 +1227,13 @@ function DayColumnInner({
 
       {/* Blocks */}
       {blocks.map((b) => (
-        <BlockBlock key={b.id} block={b} compact={compact} hourHeight={hourHeight} />
+        <BlockBlock
+          key={b.id}
+          block={b}
+          compact={compact}
+          hourHeight={hourHeight}
+          onTap={() => onTapBlock(b.id)}
+        />
       ))}
 
       {/* Travel buffers */}
