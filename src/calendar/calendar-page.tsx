@@ -1509,20 +1509,26 @@ function BufferBlock({
         height: h,
         left: 2,
         right: 2,
-        borderRadius: 4,
-        backgroundColor: "rgba(240,235,216,0.05)",
-        border: "1px solid rgba(240,235,216,0.10)",
+        borderRadius: 6,
+        // Buffer is committed time. Distinct from "open" (transparent warm
+        // band) and from "blocked" (dark hatched). We give it a soft orange
+        // wash with a faint diagonal weave so it reads as "occupied, soft"
+        // — clearly not bookable, clearly not a hard block.
+        backgroundColor: "rgba(255,130,63,0.10)",
+        backgroundImage:
+          "repeating-linear-gradient(135deg, rgba(255,130,63,0.14) 0 3px, transparent 3px 7px)",
+        border: "1px dashed rgba(255,130,63,0.35)",
         color: CREAM,
         padding: compact ? "0 4px" : "2px 6px",
         fontFamily: UI,
         fontSize: compact ? 8.5 : 10,
-        fontWeight: 500,
+        fontWeight: 600,
         letterSpacing: "-0.005em",
-        opacity: 0.7,
+        opacity: 0.95,
       }}
     >
       {showInlineLabel ? (
-        <span className="truncate">
+        <span className="truncate" style={{ opacity: 0.85 }}>
           Travel · {buffer.minutes} min · {buffer.miles} mi
         </span>
       ) : null}
