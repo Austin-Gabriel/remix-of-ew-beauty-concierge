@@ -66,6 +66,19 @@ export type DevAvailability =
   | "weekend-warrior"
   | "limited";
 
+/**
+ * Edited availability override. When present, completely supersedes the
+ * `availability` preset. Shape mirrors `AvailabilityWeek` from
+ * /src/calendar/calendar-data.ts (kept JSON-shaped here to avoid cross-domain
+ * type imports — the calendar layer narrows it on read).
+ *
+ * Keys are 0=Sun … 6=Sat. Empty array = day off.
+ */
+export type DevAvailabilityOverride = Record<
+  number,
+  { startMin: number; endMin: number }[]
+>;
+
 export interface DevState {
   proState: DevProState;
   dataDensity: DevDataDensity;
@@ -77,6 +90,7 @@ export interface DevState {
   weekDensity: DevWeekDensity;
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
+  availabilityOverride: DevAvailabilityOverride | null;
 }
 
 const DEFAULT_STATE: DevState = {
@@ -90,6 +104,7 @@ const DEFAULT_STATE: DevState = {
   weekDensity: "auto",
   blockedTime: "auto",
   availability: "auto",
+  availabilityOverride: null,
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
@@ -107,8 +122,10 @@ interface Ctx {
   setWeekDensity: (v: DevWeekDensity) => void;
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
+  setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
   reset: () => void;
 }
+
 
 const DevStateContext = createContext<Ctx | null>(null);
 
@@ -166,16 +183,20 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
   const setWeekDensity = useCallback((v: DevWeekDensity) => setState((s) => ({ ...s, weekDensity: v })), []);
   const setBlockedTime = useCallback((v: DevBlockedTime) => setState((s) => ({ ...s, blockedTime: v })), []);
   const setAvailability = useCallback((v: DevAvailability) => setState((s) => ({ ...s, availability: v })), []);
+  const setAvailabilityOverride = useCallback(
+    (v: DevAvailabilityOverride | null) => setState((s) => ({ ...s, availabilityOverride: v })),
+    [],
+  );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
 
   const value = useMemo<Ctx>(
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability,
+      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -197,6 +218,7 @@ export function useDevState(): Ctx {
       setWeekDensity: () => {},
       setBlockedTime: () => {},
       setAvailability: () => {},
+      setAvailabilityOverride: () => {},
       reset: () => {},
     };
   }

@@ -192,6 +192,29 @@ export function availabilityFor(preset: DevAvailability): AvailabilityWeek {
   }
 }
 
+/**
+ * Resolve effective availability: an explicit edited override always wins;
+ * otherwise fall back to the dev-state preset shape. Multi-range supported
+ * via the override path — the preset shapes already support multi-range.
+ */
+export function resolveAvailability(
+  preset: DevAvailability,
+  override: Record<number, { startMin: number; endMin: number }[]> | null,
+): AvailabilityWeek {
+  if (override) {
+    const out: AvailabilityWeek = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    for (let i = 0; i < 7; i++) {
+      const ranges = override[i] ?? [];
+      out[i] = ranges
+        .filter((r) => r.endMin > r.startMin)
+        .map((r) => ({ startMin: r.startMin, endMin: r.endMin }))
+        .sort((a, b) => a.startMin - b.startMin);
+    }
+    return out;
+  }
+  return availabilityFor(preset);
+}
+
 export function todayHoursLabel(av: AvailabilityWeek, today: Date): string {
   const ranges = av[today.getDay()] ?? [];
   if (ranges.length === 0) return "Today · No work";

@@ -20,9 +20,9 @@ import { ActiveBookingStrip } from "@/components/active-booking-strip";
 import { useDevState } from "@/dev-state/dev-state-context";
 import {
   addDays,
-  availabilityFor,
   densityPaddingForWeek,
   realBookingsForWeek,
+  resolveAvailability,
   dayInitial,
   fmtHourLabel,
   fmtTime,
@@ -97,7 +97,10 @@ export function CalendarPage() {
   const [bufferSheet, setBufferSheet] = useState<TravelBuffer | null>(null);
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
-  const av = useMemo(() => availabilityFor(dev.availability), [dev.availability]);
+  const av = useMemo(
+    () => resolveAvailability(dev.availability, dev.availabilityOverride),
+    [dev.availability, dev.availabilityOverride],
+  );
 
   // Subtitle string per view.
   const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
@@ -2365,6 +2368,14 @@ function BufferSheet({
   );
 }
 
+/**
+ * Availability sheet — multi-range editor.
+ *
+ * Each day row supports an arbitrary number of `{ startMin, endMin }` ranges.
+ * On/off toggle clears or seeds a single 10–6 range. Inline `<input type="time">`
+ * pairs let the pro adjust each range. Every edit writes through to dev-state's
+ * `availabilityOverride` so the calendar grid re-renders LIVE — no refresh.
+ */
 function AvailabilitySheet({
   availability,
   onClose,
@@ -2372,19 +2383,48 @@ function AvailabilitySheet({
   availability: AvailabilityWeek;
   onClose: () => void;
 }) {
-  const [local, setLocal] = useState<AvailabilityWeek>(() => ({ ...availability }));
-  const toggleDay = (idx: number) => {
-    setLocal((prev) => ({
-      ...prev,
-      [idx]: prev[idx]?.length ? [] : [{ startMin: 10 * 60, endMin: 18 * 60 }],
-    }));
+  const { setAvailabilityOverride } = useDevState();
+  const [local, setLocal] = useState<AvailabilityWeek>(() => normalize(availability));
+
+  // Live propagation: every state change is mirrored into dev-state so the
+  // calendar grid behind the sheet repaints immediately.
+  const commit = (next: AvailabilityWeek) => {
+    setLocal(next);
+    const out: Record<number, { startMin: number; endMin: number }[]> = {};
+    for (let i = 0; i < 7; i++) out[i] = (next[i] ?? []).map((r) => ({ ...r }));
+    setAvailabilityOverride(out);
   };
-  const fmt = (min: number) => {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    return fmtTime(d);
+
+  const toggleDay = (idx: number) => {
+    const cur = local[idx] ?? [];
+    commit({
+      ...local,
+      [idx]: cur.length ? [] : [{ startMin: 10 * 60, endMin: 18 * 60 }],
+    });
+  };
+
+  const addRange = (idx: number) => {
+    const cur = local[idx] ?? [];
+    // Find a sensible next start: 1h after the last range's end (or 10am).
+    const lastEnd = cur.length ? cur[cur.length - 1].endMin : 9 * 60;
+    const start = Math.min(lastEnd + 60, 22 * 60);
+    const end = Math.min(start + 120, 23 * 60);
+    commit({ ...local, [idx]: [...cur, { startMin: start, endMin: end }] });
+  };
+
+  const removeRange = (idx: number, ri: number) => {
+    const cur = local[idx] ?? [];
+    commit({ ...local, [idx]: cur.filter((_, i) => i !== ri) });
+  };
+
+  const updateRange = (
+    idx: number,
+    ri: number,
+    next: Partial<AvailabilityRange>,
+  ) => {
+    const cur = local[idx] ?? [];
+    const updated = cur.map((r, i) => (i === ri ? { ...r, ...next } : r));
+    commit({ ...local, [idx]: updated });
   };
 
   return (
@@ -2395,10 +2435,10 @@ function AvailabilitySheet({
           fontSize: 12,
           color: CREAM,
           opacity: 0.55,
-          marginBottom: 10,
+          marginBottom: 12,
         }}
       >
-        Tap a day to toggle. Edit individual hours from a day's row.
+        Tap a day to toggle. Add multiple ranges per day for split shifts.
       </div>
       <div className="flex flex-col gap-2">
         {FULL_DAY_LABELS.map((label, i) => {
@@ -2407,64 +2447,118 @@ function AvailabilitySheet({
           return (
             <div
               key={i}
-              className="flex items-center justify-between rounded-xl px-3 py-3"
+              className="rounded-xl"
               style={{
                 backgroundColor: "rgba(240,235,216,0.04)",
                 border: "1px solid rgba(240,235,216,0.10)",
+                padding: "12px 12px 10px",
               }}
             >
-              <div>
-                <div
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  className="text-left"
                   style={{
                     fontFamily: UI,
                     fontSize: 14,
                     fontWeight: 600,
                     color: CREAM,
+                    backgroundColor: "transparent",
+                    border: "none",
+                    padding: 0,
                   }}
                 >
                   {label}
-                </div>
-                <div
+                  {!on ? (
+                    <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 8 }}>
+                      Off
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  aria-pressed={on}
+                  className="flex shrink-0 items-center rounded-full"
                   style={{
-                    fontFamily: UI,
-                    fontSize: 12,
-                    color: CREAM,
-                    opacity: 0.55,
-                    marginTop: 2,
-                    fontVariantNumeric: "tabular-nums",
+                    width: 38,
+                    height: 22,
+                    padding: 2,
+                    backgroundColor: on ? ORANGE : "rgba(240,235,216,0.18)",
+                    border: "none",
                   }}
                 >
-                  {on
-                    ? ranges
-                        .map((r) => `${fmt(r.startMin)} – ${fmt(r.endMin)}`)
-                        .join(" · ")
-                    : "Off"}
-                </div>
+                  <span
+                    className="rounded-full"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      backgroundColor: MIDNIGHT,
+                      transform: on ? "translateX(16px)" : "translateX(0)",
+                      transition: "transform 200ms ease",
+                    }}
+                  />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => toggleDay(i)}
-                aria-pressed={on}
-                className="flex shrink-0 items-center rounded-full"
-                style={{
-                  width: 38,
-                  height: 22,
-                  padding: 2,
-                  backgroundColor: on ? ORANGE : "rgba(240,235,216,0.18)",
-                  border: "none",
-                }}
-              >
-                <span
-                  className="rounded-full"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    backgroundColor: MIDNIGHT,
-                    transform: on ? "translateX(16px)" : "translateX(0)",
-                    transition: "transform 200ms ease",
-                  }}
-                />
-              </button>
+
+              {on ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  {ranges.map((r, ri) => (
+                    <div
+                      key={ri}
+                      className="flex items-center gap-2"
+                      style={{ fontFamily: UI }}
+                    >
+                      <TimeInput
+                        value={minToHHMM(r.startMin)}
+                        onChange={(v) =>
+                          updateRange(i, ri, { startMin: hhmmToMin(v) })
+                        }
+                      />
+                      <span style={{ color: CREAM, opacity: 0.4, fontSize: 13 }}>
+                        –
+                      </span>
+                      <TimeInput
+                        value={minToHHMM(r.endMin)}
+                        onChange={(v) =>
+                          updateRange(i, ri, { endMin: hhmmToMin(v) })
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeRange(i, ri)}
+                        aria-label="Remove range"
+                        className="ml-auto flex items-center justify-center rounded-full transition-opacity active:opacity-60"
+                        style={{
+                          width: 28,
+                          height: 28,
+                          backgroundColor: "rgba(240,235,216,0.06)",
+                          border: "1px solid rgba(240,235,216,0.12)",
+                          color: CREAM,
+                        }}
+                      >
+                        <X size={14} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addRange(i)}
+                    className="mt-1 self-start rounded-full px-3 py-1.5 transition-opacity active:opacity-70"
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: ORANGE,
+                      backgroundColor: "rgba(255,130,63,0.10)",
+                      border: "1px solid rgba(255,130,63,0.30)",
+                    }}
+                  >
+                    + Add range
+                  </button>
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -2481,8 +2575,53 @@ function AvailabilitySheet({
           textTransform: "uppercase",
         }}
       >
-        Saved
+        Saved live
       </div>
     </SheetShell>
   );
+}
+
+function TimeInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-transparent outline-none"
+      style={{
+        fontFamily: UI,
+        fontSize: 13,
+        color: CREAM,
+        padding: "6px 10px",
+        borderRadius: 8,
+        border: "1px solid rgba(240,235,216,0.18)",
+        backgroundColor: "rgba(240,235,216,0.04)",
+        colorScheme: "dark",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    />
+  );
+}
+
+function minToHHMM(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function hhmmToMin(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map((s) => parseInt(s, 10));
+  return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+}
+
+function normalize(av: AvailabilityWeek): AvailabilityWeek {
+  const out: AvailabilityWeek = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+  for (let i = 0; i < 7; i++) out[i] = (av[i] ?? []).map((r) => ({ ...r }));
+  return out;
 }
