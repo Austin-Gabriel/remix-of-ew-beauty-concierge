@@ -80,10 +80,15 @@ export function CalendarPage() {
   const { state: dev } = useDevState();
   const navigate = useNavigate();
 
-  const initialView: View =
-    dev.calendarView === "auto" ? "week" : dev.calendarView;
-  const [view, setView] = useState<View>(initialView);
+  // Calendar always lands on Week. Per spec: "every time the pro enters the
+  // Calendar tab, they land on Week, regardless of what view they were on
+  // previously." No persistence.
+  const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  // The "hero" day inside Week view. Defaults to today; tapping a Week day
+  // header changes it without navigating away. Tapping a Month cell sets
+  // this AND switches to Week.
+  const [heroDay, setHeroDay] = useState<Date>(() => new Date());
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Sheets
@@ -92,7 +97,6 @@ export function CalendarPage() {
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
   const av = useMemo(() => availabilityFor(dev.availability), [dev.availability]);
-  const today = new Date();
 
   // Subtitle string per view.
   const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
@@ -102,8 +106,6 @@ export function CalendarPage() {
       <ActiveBookingStrip />
       <Header
         subtitle={subtitle}
-        view={view}
-        onViewChange={setView}
         onOverflow={() => setOverflowOpen(true)}
       />
 
@@ -111,31 +113,24 @@ export function CalendarPage() {
         {view === "week" ? (
           <WeekView
             anchor={anchor}
-            onAnchorChange={setAnchor}
-            availability={av}
-            blockedPreset={dev.blockedTime}
-            density={dev.weekDensity}
-            onOpenBooking={(id) => {
-              if (isRealBookingId(id)) {
-                navigate({ to: "/bookings/$id", params: { id } });
-              }
-            }}
-            onTapEmpty={(start) => setBlockSheet({ start })}
-            onTapBuffer={(b) => setBufferSheet(b)}
-            onTapDay={(d) => {
+            onAnchorChange={(d) => {
               setAnchor(d);
-              setView("day");
+              // Keep the hero inside the visible week. If the user paged to
+              // a new week, default the hero to that week's "today" (or the
+              // first day if today isn't in range).
+              const wkStart = startOfWeek(d);
+              const today = new Date();
+              const todayInWeek =
+                today >= wkStart && today < addDays(wkStart, 7);
+              setHeroDay(todayInWeek ? today : wkStart);
             }}
-          />
-        ) : null}
-
-        {view === "day" ? (
-          <DayView
-            anchor={anchor}
-            onAnchorChange={setAnchor}
             availability={av}
             blockedPreset={dev.blockedTime}
             density={dev.weekDensity}
+            view={view}
+            onViewChange={setView}
+            heroDay={heroDay}
+            onHeroDayChange={setHeroDay}
             onOpenBooking={(id) => {
               if (isRealBookingId(id)) {
                 navigate({ to: "/bookings/$id", params: { id } });
@@ -152,9 +147,13 @@ export function CalendarPage() {
             onAnchorChange={setAnchor}
             density={dev.weekDensity}
             availability={av}
+            view={view}
+            onViewChange={setView}
             onTapDay={(d) => {
+              // Tapping a Month day: set as hero, jump to Week.
               setAnchor(d);
-              setView("day");
+              setHeroDay(d);
+              setView("week");
             }}
           />
         ) : null}
