@@ -1658,7 +1658,7 @@ function BlockBlock({
           {block.reason}
         </span>
       ) : null}
-    </div>
+    </button>
   );
 }
 
