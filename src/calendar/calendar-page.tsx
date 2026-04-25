@@ -1091,6 +1091,7 @@ function DayColumnInner({
   freeSlots,
   hourHeight,
   compact,
+  hero = false,
   nowBookingId,
   onOpenBooking,
   onTapEmpty,
@@ -1107,6 +1108,9 @@ function DayColumnInner({
   freeSlots: FreeSlot[];
   hourHeight: number;
   compact: boolean;
+  /** When true (Week view's highlighted day), bookings render with fuller
+   *  content even within the compact layout. */
+  hero?: boolean;
   nowBookingId: string | null;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
