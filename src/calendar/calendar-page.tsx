@@ -1143,6 +1143,7 @@ function DayColumnInner({
   nowBookingId,
   onOpenBooking,
   onTapEmpty,
+  onTapBlock,
   onTapBuffer,
   showInlineLabels,
 }: {
