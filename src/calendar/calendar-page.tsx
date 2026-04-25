@@ -2720,9 +2720,7 @@ function BufferSheet({
           marginBottom: 12,
         }}
       >
-        {buffer.miles > 0
-          ? `Padding · ${total} min · ${buffer.miles} mi · minimum ${buffer.minMinutes} min`
-          : `Padding · ${total} min · minimum ${buffer.minMinutes} min`}
+        {`Padding · ${total} min · minimum ${buffer.minMinutes} min`}
       </div>
 
       {phase === "choose" ? (
