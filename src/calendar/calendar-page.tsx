@@ -716,9 +716,10 @@ function DayView({
 }) {
   const wkStart = startOfWeek(anchor);
   const today = new Date();
+  void density;
   const items = useMemo(
-    () => bookingsForWeek(wkStart, density).filter((b) => isSameDay(b.startsAt, anchor)),
-    [wkStart, density, anchor],
+    () => realBookingsForWeek(wkStart).filter((b) => isSameDay(b.startsAt, anchor)),
+    [wkStart, anchor],
   );
   const buffers = useMemo(() => travelBuffersFor(items), [items]);
   const blocks = useMemo(
@@ -836,7 +837,8 @@ function WeekView({
   const wkStart = startOfWeek(anchor);
   const days = weekDays(wkStart);
   const today = new Date();
-  const items = useMemo(() => bookingsForWeek(wkStart, density), [wkStart, density]);
+  void density;
+  const items = useMemo(() => realBookingsForWeek(wkStart), [wkStart]);
   const buffers = useMemo(() => travelBuffersFor(items), [items]);
   const blocks = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
   const stats = statsForRange(items, wkStart, addDays(wkStart, 7), availability);
@@ -1645,34 +1647,45 @@ function MonthView({
     const weekStarts = new Set<number>();
     cells.forEach((d) => weekStarts.add(startOfWeek(d).getTime()));
     weekStarts.forEach((ts) => {
-      const items = bookingsForWeek(new Date(ts), density);
-      const buffers = travelBuffersFor(items);
-      items.forEach((b) => {
+      const real = realBookingsForWeek(new Date(ts));
+      // Counts shown on each cell are CANONICAL ONLY — they must match
+      // the Bookings tab. Density-padding bookings only influence the
+      // heat tint, never the visible number.
+      real.forEach((b) => {
         const key = startOfDay(b.startsAt).getTime().toString();
         cMap.set(key, (cMap.get(key) ?? 0) + 1);
-        // 1 unit per booking baseline.
         dMap.set(key, (dMap.get(key) ?? 0) + 1);
       });
+      const padding = densityPaddingForWeek(new Date(ts), density);
+      padding.forEach((b) => {
+        const key = startOfDay(b.startsAt).getTime().toString();
+        // Padding contributes to tint only.
+        dMap.set(key, (dMap.get(key) ?? 0) + 1);
+      });
+      // Travel buffers across (real + padding) further raise the tint.
+      const allForBuffers = [...real, ...padding].sort(
+        (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
+      );
+      const buffers = travelBuffersFor(allForBuffers);
       buffers.forEach((b) => {
         const key = startOfDay(b.startsAt).getTime().toString();
-        // Each ~30 min of travel buffer contributes 0.5 to density.
         dMap.set(key, (dMap.get(key) ?? 0) + b.minutes / 60);
       });
     });
     return { counts: cMap, density: dMap };
   }, [cells, density]);
 
-  // Stats for the month proper (not the visible 6 weeks).
+  // Month stats are CANONICAL ONLY — must match Bookings tab totals.
   const monthStats = useMemo(() => {
     let allItems: CalendarBooking[] = [];
     let cursor = startOfWeek(monthStart);
     while (cursor < monthEnd) {
-      const items = bookingsForWeek(cursor, density);
+      const items = realBookingsForWeek(cursor);
       allItems = allItems.concat(items);
       cursor = addDays(cursor, 7);
     }
     return statsForRange(allItems, monthStart, monthEnd, availability);
-  }, [monthStart, monthEnd, density, availability]);
+  }, [monthStart, monthEnd, availability]);
 
   const monthLabel = anchor.toLocaleString(undefined, {
     month: "long",
@@ -2115,7 +2128,8 @@ function BlockTimeSheet({
 
   const conflictCheck = (durationMin: number): string | null => {
     const wkStart = startOfWeek(start);
-    const items = bookingsForWeek(wkStart, density).filter((b) =>
+    void density;
+    const items = realBookingsForWeek(wkStart).filter((b) =>
       isSameDay(b.startsAt, start),
     );
     const end = new Date(start.getTime() + durationMin * 60_000);
