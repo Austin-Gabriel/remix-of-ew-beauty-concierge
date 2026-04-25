@@ -734,7 +734,8 @@ function DayView({
   blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
   onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
+  onTapEmpty: (start: Date, presetMinutes?: number) => void;
+  onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
 }) {
   const wkStart = startOfWeek(anchor);
