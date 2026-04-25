@@ -296,6 +296,8 @@ function rng(seed: number) {
 export interface CalendarBooking {
   id: string;
   clientFirst: string;
+  /** Capital initial of the last name (e.g. "U" for "Evans Udo"). Empty string if unknown. */
+  clientLastInitial: string;
   service: CanonicalService;
   startsAt: Date;
   durationMin: number;
