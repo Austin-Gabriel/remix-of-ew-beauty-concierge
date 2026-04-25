@@ -9,7 +9,6 @@ import {
   type DevDayContext,
   type DevLifecycle,
   type DevBookingSource,
-  type DevCalendarView,
   type DevWeekDensity,
   type DevBlockedTime,
   type DevAvailability,
@@ -75,13 +74,6 @@ const BOOKING_SOURCES: { value: DevBookingSource; label: string; hint: string }[
   { value: "scheduled", label: "Scheduled", hint: "Get Ready shows Leave by behavior" },
 ];
 
-const CALENDAR_VIEWS: { value: DevCalendarView; label: string; hint: string }[] = [
-  { value: "auto", label: "Auto", hint: "Calendar's default (Week)" },
-  { value: "day", label: "Day", hint: "Single-day grid" },
-  { value: "week", label: "Week", hint: "Hero — 7-day grid" },
-  { value: "month", label: "Month", hint: "Density grid" },
-];
-
 const WEEK_DENSITIES: { value: DevWeekDensity; label: string; hint: string }[] = [
   { value: "auto", label: "Auto", hint: "Use mock data as-is" },
   { value: "empty", label: "Empty week", hint: "No bookings" },
@@ -117,7 +109,6 @@ export function DevStateToggle() {
     setDayContext,
     setLifecycle,
     setBookingSource,
-    setCalendarView,
     setWeekDensity,
     setBlockedTime,
     setAvailability,
@@ -278,13 +269,7 @@ export function DevStateToggle() {
                 onChange={(v) => setDataDensity(v as DevDataDensity)}
               />
               <Group
-                title="Calendar view"
-                value={state.calendarView}
-                options={CALENDAR_VIEWS}
-                onChange={(v) => setCalendarView(v as DevCalendarView)}
-              />
-              <Group
-                title="Week density (calendar)"
+                title="Density (calendar)"
                 value={state.weekDensity}
                 options={WEEK_DENSITIES}
                 onChange={(v) => setWeekDensity(v as DevWeekDensity)}
