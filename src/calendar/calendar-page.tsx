@@ -23,6 +23,7 @@ import {
   availabilityFor,
   densityPaddingForWeek,
   realBookingsForWeek,
+  resolveAvailability,
   dayInitial,
   fmtHourLabel,
   fmtTime,
