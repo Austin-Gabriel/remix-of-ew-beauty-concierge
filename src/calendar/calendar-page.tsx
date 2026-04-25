@@ -2184,7 +2184,9 @@ function BlockTimeSheet({
   const [durationMin, setDurationMin] = useState<number>(initialDuration);
   const [reason, setReason] = useState<string>(editing?.reason ?? "");
   const [phase, setPhase] = useState<"choose" | "custom" | "saved" | "conflict">(
-    mode.mode === "edit" || mode.presetMinutes ? "custom" : "choose",
+    mode.mode === "edit" || (mode.mode === "create" && mode.presetMinutes)
+      ? "custom"
+      : "choose",
   );
   const [conflictName, setConflictName] = useState<string | null>(null);
 
