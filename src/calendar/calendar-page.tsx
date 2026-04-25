@@ -1510,12 +1510,14 @@ function MonthView({
           // Heat tier: 0 → none, 1 → light, 2-3 → medium, 4+ → full.
           const tier = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
           const tints = [
-            "rgba(240,235,216,0.025)",
-            "rgba(255,130,63,0.10)",
-            "rgba(255,130,63,0.25)",
+            "transparent",
+            "rgba(255,130,63,0.15)",
+            "rgba(255,130,63,0.40)",
             "rgba(255,130,63,1)",
           ];
-          const numColor = tier === 3 ? MIDNIGHT : text;
+          const numColor =
+            tier === 3 ? MIDNIGHT : tier === 0 ? `${text}` : text;
+          const numOpacity = tier === 0 ? 0.45 : 1;
           const countColor = tier === 3 ? MIDNIGHT : ORANGE;
 
           return (
