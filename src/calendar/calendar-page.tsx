@@ -1459,7 +1459,7 @@ function BookingBlock({
               }}
             >
               {initials}
-              {item.clientFirst[1]?.toUpperCase() ?? ""}
+              {item.clientLastInitial || item.clientFirst[1]?.toUpperCase() || ""}
             </div>
           ) : null}
           <div className="min-w-0 flex-1">
@@ -1474,7 +1474,12 @@ function BookingBlock({
                 paddingRight: isNow ? 42 : 14,
               }}
             >
-              {item.clientFirst} · {fmtTimeShort(item.startsAt)}
+              {item.clientFirst}
+              {item.clientLastInitial ? ` ${item.clientLastInitial}.` : ""}
+              {" · "}
+              {fmtTimeShort(item.startsAt)}
+              {" – "}
+              {fmtTimeShort(new Date(item.startsAt.getTime() + item.durationMin * 60_000))}
             </div>
             {!tiny ? (
               <div
@@ -1488,7 +1493,7 @@ function BookingBlock({
                   lineHeight: 1.2,
                 }}
               >
-                {item.service} · {item.neighborhood.split(",")[0]}
+                {item.service} · {item.neighborhood.split(",")[0]} · {fmtUsd(item.priceUsd)}
               </div>
             ) : null}
           </div>
