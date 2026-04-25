@@ -183,6 +183,8 @@ function CalendarPageInner() {
         ) : null}
       </div>
 
+      <UndoRedoPill />
+
       <BottomTabs
         active="calendar"
         onSelect={(k: TabKey) => {
@@ -1663,6 +1665,54 @@ function BlockBlock({
    Tap = open Block sheet at that minute (no preset).
    Tap-and-drag = open Block sheet pre-filled with the swept duration.
 ===================================================================== */
+function UndoRedoPill() {
+  const { canUndo, canRedo, undo, redo } = useCalendarEdits();
+  if (!canUndo && !canRedo) return null;
+  return (
+    <div
+      className="pointer-events-none fixed bottom-24 left-0 right-0 z-40 flex justify-center"
+      style={{ fontFamily: UI }}
+    >
+      <div
+        className="pointer-events-auto flex items-center gap-1 rounded-full border px-1 py-1 shadow-lg"
+        style={{
+          backgroundColor: "rgba(6,28,39,0.92)",
+          borderColor: "rgba(240,235,216,0.18)",
+          color: CREAM,
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          className="rounded-full px-3 py-1.5 text-xs font-semibold transition-opacity disabled:opacity-30"
+          style={{ letterSpacing: "-0.005em" }}
+        >
+          ↶ Undo
+        </button>
+        <div
+          aria-hidden
+          style={{
+            width: 1,
+            height: 16,
+            backgroundColor: "rgba(240,235,216,0.18)",
+          }}
+        />
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          className="rounded-full px-3 py-1.5 text-xs font-semibold transition-opacity disabled:opacity-30"
+          style={{ letterSpacing: "-0.005em" }}
+        >
+          Redo ↷
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DragToBlockSurface({
   day,
   hourHeight,
