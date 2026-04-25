@@ -98,7 +98,10 @@ export function CalendarPage() {
   const [bufferSheet, setBufferSheet] = useState<TravelBuffer | null>(null);
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
-  const av = useMemo(() => availabilityFor(dev.availability), [dev.availability]);
+  const av = useMemo(
+    () => resolveAvailability(dev.availability, dev.availabilityOverride),
+    [dev.availability, dev.availabilityOverride],
+  );
 
   // Subtitle string per view.
   const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
