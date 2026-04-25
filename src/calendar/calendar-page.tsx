@@ -539,56 +539,73 @@ function StatStrip({
    GRID PRIMITIVES
 ===================================================================== */
 
-function HourLines({ hourHeight }: { hourHeight: number }) {
+function HourGutter({ hourHeight }: { hourHeight: number }) {
   const { text } = useHomeTheme();
   const hours: number[] = [];
   for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
   return (
-    <div className="absolute inset-0">
+    <div
+      className="relative"
+      style={{
+        width: GUTTER_W,
+        flexShrink: 0,
+        borderRight: "1px solid rgba(240,235,216,0.06)",
+      }}
+    >
+      {hours.map((h) => {
+        const top = (h - GRID_START_HOUR) * hourHeight;
+        return (
+          <span
+            key={h}
+            className="absolute"
+            style={{
+              top: top - 6,
+              right: 6,
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 500,
+              color: text,
+              opacity: 0.5,
+              textAlign: "right",
+              letterSpacing: "0.02em",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmtHourLabel(h)}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const hours: number[] = [];
+  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  return (
+    <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
         const top = (h - GRID_START_HOUR) * hourHeight;
         return (
           <div key={h}>
             <div
-              className="absolute"
+              className="absolute left-0 right-0"
               style={{
                 top,
-                left: 0,
-                right: 0,
                 height: 1,
                 backgroundColor: "rgba(240,235,216,0.08)",
               }}
             />
             {i < hours.length - 1 ? (
               <div
-                className="absolute"
+                className="absolute left-0 right-0"
                 style={{
                   top: top + hourHeight / 2,
-                  left: 0,
-                  right: 0,
                   height: 1,
                   backgroundColor: "rgba(240,235,216,0.035)",
                 }}
               />
             ) : null}
-            <span
-              className="absolute"
-              style={{
-                top: top - 6,
-                left: -GUTTER_W,
-                width: GUTTER_W - 6,
-                fontFamily: UI,
-                fontSize: 10,
-                fontWeight: 500,
-                color: text,
-                opacity: 0.45,
-                textAlign: "right",
-                letterSpacing: "0.02em",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {fmtHourLabel(h)}
-            </span>
           </div>
         );
       })}
@@ -686,14 +703,12 @@ function DayView({
         style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
       >
         <div
-          className="relative"
-          style={{
-            height: GRID_HOURS * HOUR_HEIGHT_DAY,
-            paddingLeft: GUTTER_W,
-          }}
+          className="relative flex"
+          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
         >
-          <HourLines hourHeight={HOUR_HEIGHT_DAY} />
-          <div className="absolute inset-0" style={{ left: GUTTER_W, right: 8 }}>
+          <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
+          <div className="relative flex-1" style={{ paddingRight: 8 }}>
+            <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
             <DayColumnInner
               day={anchor}
               isToday={isToday}
@@ -769,104 +784,96 @@ function WeekView({
       />
 
       <div
-        className="relative flex-1 overflow-y-auto"
+        className="relative flex-1 overflow-y-auto overflow-x-hidden"
         style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
       >
         {/* Sticky day headers */}
         <div
-          className="sticky top-0 z-20 grid"
+          className="sticky top-0 z-20 flex"
           style={{
-            gridTemplateColumns: `${GUTTER_W}px repeat(7, minmax(0, 1fr))`,
             backgroundColor: NAVY_PANEL,
             borderBottom: "1px solid rgba(240,235,216,0.10)",
           }}
         >
-          <div />
-          {days.map((d, i) => {
-            const isToday = isSameDay(d, today);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onTapDay(d)}
-                className="flex flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
-                style={{ border: "none", background: "transparent" }}
-              >
-                <span
-                  style={{
-                    fontFamily: UI,
-                    fontSize: 9,
-                    fontWeight: 600,
-                    color: CREAM,
-                    opacity: 0.5,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
+          <div style={{ width: GUTTER_W, flexShrink: 0 }} />
+          <div className="flex flex-1">
+            {days.map((d, i) => {
+              const isToday = isSameDay(d, today);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onTapDay(d)}
+                  className="flex flex-1 flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
+                  style={{ border: "none", background: "transparent", minWidth: 0 }}
                 >
-                  {dayInitial(i)}
-                </span>
-                <span
-                  className="mt-1 flex items-center justify-center rounded-full"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    fontFamily: UI,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    color: isToday ? MIDNIGHT : CREAM,
-                    backgroundColor: isToday ? ORANGE : "transparent",
-                    border: isToday ? "none" : "1px solid transparent",
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {d.getDate()}
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: CREAM,
+                      opacity: 0.5,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {dayInitial(i)}
+                  </span>
+                  <span
+                    className="mt-1 flex items-center justify-center rounded-full"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      fontFamily: UI,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: isToday ? MIDNIGHT : CREAM,
+                      backgroundColor: isToday ? ORANGE : "transparent",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {d.getDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div
-          className="relative"
-          style={{
-            height: GRID_HOURS * HOUR_HEIGHT_WEEK,
-            paddingLeft: GUTTER_W,
-          }}
+          className="relative flex"
+          style={{ height: GRID_HOURS * HOUR_HEIGHT_WEEK }}
         >
-          <HourLines hourHeight={HOUR_HEIGHT_WEEK} />
-          <div
-            className="absolute inset-0"
-            style={{
-              left: GUTTER_W,
-              display: "grid",
-              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-            }}
-          >
+          <HourGutter hourHeight={HOUR_HEIGHT_WEEK} />
+          <div className="relative flex flex-1">
+            <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
             {days.map((d, i) => (
-              <DayColumnInner
-                key={i}
-                day={d}
-                isToday={isSameDay(d, today)}
-                isPast={d < startOfDay(today)}
-                availability={availability[d.getDay()] ?? []}
-                items={items.filter((b) => isSameDay(b.startsAt, d))}
-                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-                freeSlots={[]}
-                hourHeight={HOUR_HEIGHT_WEEK}
-                compact
-                nowBookingId={null}
-                onOpenBooking={onOpenBooking}
-                onTapEmpty={onTapEmpty}
-                onTapBuffer={onTapBuffer}
-                showInlineLabels={false}
-              />
+              <div key={i} className="relative flex-1" style={{ minWidth: 0 }}>
+                <DayColumnInner
+                  day={d}
+                  isToday={isSameDay(d, today)}
+                  isPast={d < startOfDay(today)}
+                  availability={availability[d.getDay()] ?? []}
+                  items={items.filter((b) => isSameDay(b.startsAt, d))}
+                  buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+                  blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+                  freeSlots={[]}
+                  hourHeight={HOUR_HEIGHT_WEEK}
+                  compact
+                  nowBookingId={null}
+                  onOpenBooking={onOpenBooking}
+                  onTapEmpty={onTapEmpty}
+                  onTapBuffer={onTapBuffer}
+                  showInlineLabels={false}
+                />
+              </div>
             ))}
+            {/* Global NOW line — only when today is in the visible week. */}
+            {days.some((d) => isSameDay(d, today)) ? (
+              <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
+            ) : null}
           </div>
-          {/* Global NOW line — only when today is in the visible week. */}
-          {days.some((d) => isSameDay(d, today)) ? (
-            <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
-          ) : null}
         </div>
       </div>
     </div>
@@ -878,8 +885,8 @@ function GlobalNowLine({ hourHeight }: { hourHeight: number }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute z-10"
-      style={{ left: GUTTER_W, right: 0, top }}
+      className="pointer-events-none absolute left-0 right-0 z-10"
+      style={{ top }}
     >
       <div
         style={{
@@ -942,7 +949,7 @@ function DayColumnInner({
 }) {
   return (
     <div
-      className="relative"
+      className="absolute inset-0"
       style={{
         borderLeft: compact ? "1px solid rgba(240,235,216,0.06)" : "none",
       }}
@@ -1503,12 +1510,14 @@ function MonthView({
           // Heat tier: 0 → none, 1 → light, 2-3 → medium, 4+ → full.
           const tier = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
           const tints = [
-            "rgba(240,235,216,0.025)",
-            "rgba(255,130,63,0.10)",
-            "rgba(255,130,63,0.25)",
+            "transparent",
+            "rgba(255,130,63,0.15)",
+            "rgba(255,130,63,0.40)",
             "rgba(255,130,63,1)",
           ];
-          const numColor = tier === 3 ? MIDNIGHT : text;
+          const numColor =
+            tier === 3 ? MIDNIGHT : tier === 0 ? `${text}` : text;
+          const numOpacity = tier === 0 ? 0.45 : 1;
           const countColor = tier === 3 ? MIDNIGHT : ORANGE;
 
           return (
@@ -1533,6 +1542,7 @@ function MonthView({
                   fontSize: 13.5,
                   fontWeight: 700,
                   color: numColor,
+                  opacity: numOpacity,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
                 }}
@@ -1574,7 +1584,7 @@ function MonthView({
         >
           Less
         </span>
-        {["rgba(240,235,216,0.06)", "rgba(255,130,63,0.10)", "rgba(255,130,63,0.30)", "rgba(255,130,63,1)"].map((c, i) => (
+        {["transparent", "rgba(255,130,63,0.15)", "rgba(255,130,63,0.40)", "rgba(255,130,63,1)"].map((c, i) => (
           <span
             key={i}
             aria-hidden
