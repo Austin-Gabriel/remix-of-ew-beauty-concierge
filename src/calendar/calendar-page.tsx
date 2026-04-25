@@ -2154,52 +2154,107 @@ function OverflowSheet({
   );
 }
 
-/* ----- Block time sheet ----- */
+/* ----- Block time sheet (create + edit) ----- */
 
 function BlockTimeSheet({
-  start,
+  mode,
   density,
   onClose,
 }: {
-  start: Date;
+  mode:
+    | { mode: "create"; start: Date; presetMinutes?: number }
+    | { mode: "edit"; blockId: string };
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
   onClose: () => void;
 }) {
+  const { addBlock, updateBlock, removeBlock, blocks } = useCalendarEdits();
+  const editing = mode.mode === "edit"
+    ? blocks.find((b) => b.id === mode.blockId) ?? null
+    : null;
+
+  // Editor state. In create mode, derive defaults from the tap or drag.
+  const initialStart =
+    mode.mode === "edit" ? editing?.startsAt ?? new Date() : mode.start;
+  const initialDuration =
+    mode.mode === "edit" && editing
+      ? Math.round((editing.endsAt.getTime() - editing.startsAt.getTime()) / 60_000)
+      : mode.presetMinutes ?? 60;
+
+  const [start, setStart] = useState<Date>(initialStart);
+  const [durationMin, setDurationMin] = useState<number>(initialDuration);
+  const [reason, setReason] = useState<string>(editing?.reason ?? "");
   const [phase, setPhase] = useState<"choose" | "custom" | "saved" | "conflict">(
-    "choose",
+    mode.mode === "edit" || mode.presetMinutes ? "custom" : "choose",
   );
   const [conflictName, setConflictName] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
 
-  const conflictCheck = (durationMin: number): string | null => {
-    const wkStart = startOfWeek(start);
+  const conflictCheck = (s: Date, dur: number): string | null => {
     void density;
-    const items = realBookingsForWeek(wkStart).filter((b) =>
-      isSameDay(b.startsAt, start),
-    );
-    const end = new Date(start.getTime() + durationMin * 60_000);
+    const wkStart = startOfWeek(s);
+    const items = realBookingsForWeek(wkStart).filter((b) => isSameDay(b.startsAt, s));
+    const end = new Date(s.getTime() + dur * 60_000);
     for (const it of items) {
       const ie = new Date(it.startsAt.getTime() + it.durationMin * 60_000);
-      if (start < ie && end > it.startsAt) return it.clientFirst;
+      if (s < ie && end > it.startsAt) return it.clientFirst;
     }
     return null;
   };
 
-  const tryBlock = (durationMin: number) => {
-    const c = conflictCheck(durationMin);
+  const persist = (s: Date, dur: number, r: string) => {
+    const end = new Date(s.getTime() + dur * 60_000);
+    if (mode.mode === "edit" && editing) {
+      updateBlock(editing.id, { startsAt: s, endsAt: end, reason: r || undefined });
+    } else {
+      addBlock({
+        id: `blk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        startsAt: s,
+        endsAt: end,
+        reason: r || undefined,
+      });
+    }
+  };
+
+  const tryBlock = (dur: number) => {
+    const c = conflictCheck(start, dur);
     if (c) {
       setConflictName(c);
       setPhase("conflict");
       return;
     }
+    persist(start, dur, reason);
+    setDurationMin(dur);
     setPhase("saved");
   };
 
+  const saveCustom = () => {
+    const c = conflictCheck(start, durationMin);
+    if (c) {
+      setConflictName(c);
+      setPhase("conflict");
+      return;
+    }
+    persist(start, durationMin, reason);
+    setPhase("saved");
+  };
+
+  const handleDelete = () => {
+    if (mode.mode === "edit" && editing) {
+      removeBlock(editing.id);
+      onClose();
+    }
+  };
+
+  const headerLabel =
+    mode.mode === "edit"
+      ? phase === "saved"
+        ? "Block updated"
+        : "Edit block"
+      : phase === "saved"
+        ? "Time blocked"
+        : "Block time";
+
   return (
-    <SheetShell
-      title={phase === "saved" ? "Time blocked" : "Block time"}
-      onClose={onClose}
-    >
+    <SheetShell title={headerLabel} onClose={onClose}>
       <div
         style={{
           fontFamily: UI,
@@ -2248,28 +2303,69 @@ function BlockTimeSheet({
               textTransform: "uppercase",
             }}
           >
-            Duration (minutes)
+            Start
           </label>
-          <div className="flex gap-2">
-            {[15, 45, 90, 120, 180].map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => tryBlock(m)}
-                className="flex-1 rounded-lg py-2 transition-opacity active:opacity-70"
-                style={{
-                  backgroundColor: "rgba(240,235,216,0.06)",
-                  border: "1px solid rgba(240,235,216,0.12)",
-                  color: CREAM,
-                  fontFamily: UI,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {m}m
-              </button>
-            ))}
+          <input
+            type="time"
+            value={`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`}
+            onChange={(e) => {
+              const [h, m] = e.target.value.split(":").map(Number);
+              const next = new Date(start);
+              next.setHours(h, m, 0, 0);
+              setStart(next);
+            }}
+            style={{
+              backgroundColor: "rgba(240,235,216,0.04)",
+              border: "1px solid rgba(240,235,216,0.12)",
+              borderRadius: 10,
+              color: CREAM,
+              fontFamily: UI,
+              fontSize: 14,
+              padding: "10px 12px",
+              outline: "none",
+              colorScheme: "dark",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          />
+          <label
+            style={{
+              fontFamily: UI,
+              fontSize: 11,
+              fontWeight: 600,
+              color: CREAM,
+              opacity: 0.65,
+              marginTop: 4,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Duration · {durationMin} min
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {[15, 30, 45, 60, 90, 120, 180].map((m) => {
+              const active = m === durationMin;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setDurationMin(m)}
+                  className="rounded-lg px-3 py-2 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: active
+                      ? "rgba(255,130,63,0.18)"
+                      : "rgba(240,235,216,0.06)",
+                    border: `1px solid ${active ? "rgba(255,130,63,0.45)" : "rgba(240,235,216,0.12)"}`,
+                    color: active ? ORANGE : CREAM,
+                    fontFamily: UI,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {m}m
+                </button>
+              );
+            })}
           </div>
           <label
             style={{
@@ -2301,6 +2397,40 @@ function BlockTimeSheet({
               outline: "none",
             }}
           />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={saveCustom}
+              className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+              style={{
+                backgroundColor: ORANGE,
+                color: MIDNIGHT,
+                fontFamily: UI,
+                fontSize: 14,
+                fontWeight: 700,
+                border: "none",
+              }}
+            >
+              {mode.mode === "edit" ? "Save changes" : "Block time"}
+            </button>
+            {mode.mode === "edit" ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-xl px-4 py-3 transition-opacity active:opacity-70"
+                style={{
+                  backgroundColor: "rgba(240,235,216,0.06)",
+                  border: "1px solid rgba(240,235,216,0.18)",
+                  color: CREAM,
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                Delete
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -2320,7 +2450,7 @@ function BlockTimeSheet({
             Pick a shorter block or a different time.
           </div>
           <div className="mt-3 flex gap-2">
-            <SheetButton onClick={() => setPhase("choose")}>
+            <SheetButton onClick={() => setPhase(mode.mode === "edit" ? "custom" : "choose")}>
               Pick another
             </SheetButton>
           </div>
@@ -2336,7 +2466,7 @@ function BlockTimeSheet({
             opacity: 0.85,
           }}
         >
-          Time blocked. The grid will reflect this on next refresh.
+          {mode.mode === "edit" ? "Changes saved." : "Time blocked."} The grid updated live.
         </div>
       ) : null}
     </SheetShell>
@@ -2350,9 +2480,20 @@ function BufferSheet({
   buffer: TravelBuffer;
   onClose: () => void;
 }) {
-  const [phase, setPhase] = useState<"choose" | "saved">("choose");
-  const [extraMin, setExtraMin] = useState(0);
-  const total = buffer.minutes + extraMin;
+  const { setBufferExtension, bufferExtensions } = useCalendarEdits();
+  const currentExtra = bufferExtensions[buffer.id] ?? 0;
+  // The buffer.minutes prop already includes any prior extension because the
+  // grid passes the extended buffer down. So compute the *base* by subtracting.
+  const baseMinutes = buffer.minutes - currentExtra;
+  const [phase, setPhase] = useState<"choose" | "custom" | "saved">("choose");
+  const [extra, setExtra] = useState<number>(currentExtra);
+  const total = baseMinutes + extra;
+
+  const apply = (e: number) => {
+    setExtra(e);
+    setBufferExtension(buffer.id, e);
+    setPhase("saved");
+  };
 
   return (
     <SheetShell title="Travel buffer" onClose={onClose}>
@@ -2367,34 +2508,95 @@ function BufferSheet({
       >
         Travel · {total} min · {buffer.miles} mi · minimum {buffer.minMinutes} min
       </div>
+
       {phase === "choose" ? (
         <div className="flex flex-col gap-2">
-          <SheetButton
-            onClick={() => {
-              setExtraMin(15);
-              setPhase("saved");
-            }}
-          >
-            Add 15 min
-          </SheetButton>
-          <SheetButton
-            onClick={() => {
-              setExtraMin(30);
-              setPhase("saved");
-            }}
-          >
-            Add 30 min
-          </SheetButton>
-          <SheetButton
-            onClick={() => {
-              setExtraMin(45);
-              setPhase("saved");
-            }}
-          >
-            Add 45 min
-          </SheetButton>
+          <SheetButton onClick={() => apply(currentExtra + 15)}>Add 15 min</SheetButton>
+          <SheetButton onClick={() => apply(currentExtra + 30)}>Add 30 min</SheetButton>
+          <SheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
+          {currentExtra > 0 ? (
+            <button
+              type="button"
+              onClick={() => apply(0)}
+              className="mt-1 rounded-xl py-2 transition-opacity active:opacity-70"
+              style={{
+                backgroundColor: "transparent",
+                border: "1px solid rgba(240,235,216,0.18)",
+                color: CREAM,
+                fontFamily: UI,
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Reset to auto-calculated
+            </button>
+          ) : null}
         </div>
-      ) : (
+      ) : null}
+
+      {phase === "custom" ? (
+        <div className="flex flex-col gap-3">
+          <label
+            style={{
+              fontFamily: UI,
+              fontSize: 11,
+              fontWeight: 600,
+              color: CREAM,
+              opacity: 0.65,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Total buffer · {Math.max(buffer.minMinutes, baseMinutes + extra)} min
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {[0, 10, 15, 20, 30, 45, 60].map((e) => {
+              const active = e === extra;
+              const wouldTotal = baseMinutes + e;
+              const valid = wouldTotal >= buffer.minMinutes;
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  disabled={!valid}
+                  onClick={() => setExtra(e)}
+                  className="rounded-lg px-3 py-2 transition-opacity active:opacity-70 disabled:opacity-30"
+                  style={{
+                    backgroundColor: active
+                      ? "rgba(255,130,63,0.18)"
+                      : "rgba(240,235,216,0.06)",
+                    border: `1px solid ${active ? "rgba(255,130,63,0.45)" : "rgba(240,235,216,0.12)"}`,
+                    color: active ? ORANGE : CREAM,
+                    fontFamily: UI,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  +{e}m
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => apply(extra)}
+            className="mt-2 rounded-xl py-3 transition-opacity active:opacity-70"
+            style={{
+              backgroundColor: ORANGE,
+              color: MIDNIGHT,
+              fontFamily: UI,
+              fontSize: 14,
+              fontWeight: 700,
+              border: "none",
+            }}
+          >
+            Save
+          </button>
+        </div>
+      ) : null}
+
+      {phase === "saved" ? (
         <div
           style={{
             fontFamily: UI,
@@ -2403,9 +2605,9 @@ function BufferSheet({
             opacity: 0.85,
           }}
         >
-          Buffer extended to {total} min for this gap only.
+          Buffer set to {baseMinutes + extra} min. Grid updated live.
         </div>
-      )}
+      ) : null}
     </SheetShell>
   );
 }
