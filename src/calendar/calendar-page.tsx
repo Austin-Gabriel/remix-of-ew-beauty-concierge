@@ -1202,6 +1202,7 @@ function DayColumnInner({
           isNow={it.id === nowBookingId}
           onTap={() => onOpenBooking(it.id)}
           compact={compact}
+          hero={hero}
           hourHeight={hourHeight}
         />
       ))}
