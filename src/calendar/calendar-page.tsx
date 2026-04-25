@@ -999,27 +999,38 @@ function WeekGrid({
         >
           <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
         </div>
-        {days.map((d, i) => (
-          <div key={i} className="relative min-w-0" style={{ borderLeft: "1px solid rgba(240,235,216,0.06)" }}>
-            <DayColumnInner
-              day={d}
-              isToday={isSameDay(d, today)}
-              isPast={d < startOfDay(today)}
-              availability={availability[d.getDay()] ?? []}
-              items={items.filter((b) => isSameDay(b.startsAt, d))}
-              buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-              blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-              freeSlots={[]}
-              hourHeight={HOUR_HEIGHT_WEEK}
-              compact
-              nowBookingId={nowBookingId}
-              onOpenBooking={onOpenBooking}
-              onTapEmpty={onTapEmpty}
-              onTapBuffer={onTapBuffer}
-              showInlineLabels={false}
-            />
-          </div>
-        ))}
+        {days.map((d, i) => {
+          const isHero = isSameDay(d, heroDay);
+          return (
+            <div
+              key={i}
+              className="relative min-w-0"
+              style={{
+                borderLeft: "1px solid rgba(240,235,216,0.06)",
+                // Subtle wash to lift the hero column without changing its width.
+                backgroundColor: isHero ? "rgba(255,130,63,0.025)" : "transparent",
+              }}
+            >
+              <DayColumnInner
+                day={d}
+                isToday={isSameDay(d, today)}
+                isPast={d < startOfDay(today)}
+                availability={availability[d.getDay()] ?? []}
+                items={items.filter((b) => isSameDay(b.startsAt, d))}
+                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+                freeSlots={[]}
+                hourHeight={HOUR_HEIGHT_WEEK}
+                compact={!isHero}
+                nowBookingId={nowBookingId}
+                onOpenBooking={onOpenBooking}
+                onTapEmpty={onTapEmpty}
+                onTapBuffer={onTapBuffer}
+                showInlineLabels={isHero}
+              />
+            </div>
+          );
+        })}
         {/* Global NOW line spans all 7 day columns (offset past the gutter). */}
         {todayInWeek ? (
           <div
