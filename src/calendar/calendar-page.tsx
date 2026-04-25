@@ -203,14 +203,14 @@ function CalendarPageInner() {
             setOverflowOpen(false);
             const start = new Date();
             start.setMinutes(0, 0, 0);
-            setBlockSheet({ start });
+            setBlockSheet({ mode: "create", start });
           }}
         />
       ) : null}
 
       {blockSheet ? (
         <BlockTimeSheet
-          start={blockSheet.start}
+          mode={blockSheet}
           density={dev.weekDensity}
           onClose={() => setBlockSheet(null)}
         />
