@@ -183,16 +183,20 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
   const setWeekDensity = useCallback((v: DevWeekDensity) => setState((s) => ({ ...s, weekDensity: v })), []);
   const setBlockedTime = useCallback((v: DevBlockedTime) => setState((s) => ({ ...s, blockedTime: v })), []);
   const setAvailability = useCallback((v: DevAvailability) => setState((s) => ({ ...s, availability: v })), []);
+  const setAvailabilityOverride = useCallback(
+    (v: DevAvailabilityOverride | null) => setState((s) => ({ ...s, availabilityOverride: v })),
+    [],
+  );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
 
   const value = useMemo<Ctx>(
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability,
+      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
