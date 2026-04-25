@@ -1665,9 +1665,7 @@ function BufferBlock({
     >
       {showInlineLabel ? (
         <span className="truncate" style={{ opacity: 0.85 }}>
-          {buffer.miles > 0
-            ? `Padding · ${buffer.minutes} min · ${buffer.miles} mi`
-            : `Padding · ${buffer.minutes} min`}
+          {`Padding · ${buffer.minutes} min`}
         </span>
       ) : null}
     </button>
@@ -2722,9 +2720,7 @@ function BufferSheet({
           marginBottom: 12,
         }}
       >
-        {buffer.miles > 0
-          ? `Padding · ${total} min · ${buffer.miles} mi · minimum ${buffer.minMinutes} min`
-          : `Padding · ${total} min · minimum ${buffer.minMinutes} min`}
+        {`Padding · ${total} min · minimum ${buffer.minMinutes} min`}
       </div>
 
       {phase === "choose" ? (
