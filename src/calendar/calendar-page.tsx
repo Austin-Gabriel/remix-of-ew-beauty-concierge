@@ -934,6 +934,13 @@ function WeekGrid({
         <div />
         {days.map((d, i) => {
           const isToday = isSameDay(d, today);
+          const isHero = isSameDay(d, heroDay);
+          // Today wins the filled-orange treatment. A non-today hero day
+          // gets a "bagel" ring (orange outline, transparent fill) to mark
+          // it as the focus column without competing with today's signal.
+          const circleBg = isToday ? ORANGE : "transparent";
+          const circleBorder = isHero && !isToday ? `1.5px solid ${ORANGE}` : "none";
+          const circleFg = isToday ? MIDNIGHT : CREAM;
           return (
             <button
               key={i}
@@ -948,7 +955,7 @@ function WeekGrid({
                   fontSize: 9,
                   fontWeight: 600,
                   color: CREAM,
-                  opacity: 0.5,
+                  opacity: isHero ? 0.9 : 0.5,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
                 }}
@@ -963,8 +970,9 @@ function WeekGrid({
                   fontFamily: UI,
                   fontSize: 12.5,
                   fontWeight: 700,
-                  color: isToday ? MIDNIGHT : CREAM,
-                  backgroundColor: isToday ? ORANGE : "transparent",
+                  color: circleFg,
+                  backgroundColor: circleBg,
+                  border: circleBorder,
                   letterSpacing: "-0.01em",
                 }}
               >
