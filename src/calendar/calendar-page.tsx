@@ -1198,22 +1198,11 @@ function DayColumnInner({
         );
       })}
 
-      {/* Tap-to-block under everything */}
-      <button
-        type="button"
-        aria-label="Block time"
-        onClick={(e) => {
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const y = e.clientY - rect.top;
-          const minutesFromTop =
-            Math.round(((y / hourHeight) * 60) / 15) * 15;
-          const start = new Date(day);
-          start.setHours(GRID_START_HOUR, 0, 0, 0);
-          start.setMinutes(start.getMinutes() + minutesFromTop);
-          onTapEmpty(start);
-        }}
-        className="absolute inset-0 cursor-pointer"
-        style={{ background: "transparent", border: "none" }}
+      {/* Tap-or-drag-to-block under everything */}
+      <DragToBlockSurface
+        day={day}
+        hourHeight={hourHeight}
+        onCommit={(start, minutes) => onTapEmpty(start, minutes)}
       />
 
       {/* Free / Lunch dashed pills (Day view only) */}
