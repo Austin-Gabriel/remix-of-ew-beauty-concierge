@@ -220,20 +220,20 @@ function useViewSubtitle(
   return useMemo(() => {
     if (view === "week") {
       const wkStart = startOfWeek(anchor);
-      const items = bookingsForWeek(wkStart, density);
+      const items = realBookingsForWeek(wkStart);
       const earned = items.reduce((s, b) => s + b.priceUsd, 0);
       const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
       const n = items.length;
       return `${rangeLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
     }
-    // month
+    // month — stats are canonical-only so they match the Bookings tab.
     const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
     const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
     let count = 0;
     let earned = 0;
     let cursor = startOfWeek(monthStart);
     while (cursor < monthEnd) {
-      const items = bookingsForWeek(cursor, density);
+      const items = realBookingsForWeek(cursor);
       items.forEach((b) => {
         if (b.startsAt >= monthStart && b.startsAt < monthEnd) {
           count += 1;
@@ -243,6 +243,7 @@ function useViewSubtitle(
       cursor = addDays(cursor, 7);
     }
     void availability;
+    void density;
     return `${monthStart.toLocaleDateString(undefined, { month: "long" })} · ${count} bookings · ${fmtUsd(earned)}`;
   }, [view, anchor, density, availability]);
 }
