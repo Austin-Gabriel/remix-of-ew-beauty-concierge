@@ -810,20 +810,26 @@ function WeekView({
   availability,
   blockedPreset,
   density,
+  view,
+  onViewChange,
+  heroDay,
+  onHeroDayChange,
   onOpenBooking,
   onTapEmpty,
   onTapBuffer,
-  onTapDay,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
   availability: AvailabilityWeek;
   blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
+  view: View;
+  onViewChange: (v: View) => void;
+  heroDay: Date;
+  onHeroDayChange: (d: Date) => void;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
   onTapBuffer: (b: TravelBuffer) => void;
-  onTapDay: (d: Date) => void;
 }) {
   const wkStart = startOfWeek(anchor);
   const days = weekDays(wkStart);
@@ -841,6 +847,8 @@ function WeekView({
         label={rangeLabel}
         onPrev={() => onAnchorChange(addDays(anchor, -7))}
         onNext={() => onAnchorChange(addDays(anchor, 7))}
+        view={view}
+        onViewChange={onViewChange}
       />
       <StatStrip
         cols={[
@@ -857,10 +865,11 @@ function WeekView({
         buffers={buffers}
         blocks={blocks}
         availability={availability}
+        heroDay={heroDay}
         onOpenBooking={onOpenBooking}
         onTapEmpty={onTapEmpty}
         onTapBuffer={onTapBuffer}
-        onTapDay={onTapDay}
+        onTapDay={onHeroDayChange}
       />
     </div>
   );
