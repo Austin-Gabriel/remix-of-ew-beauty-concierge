@@ -217,26 +217,12 @@ function useViewSubtitle(
   availability: AvailabilityWeek,
 ): string {
   return useMemo(() => {
-    if (view === "day") {
-      const wkStart = startOfWeek(anchor);
-      const items = bookingsForWeek(wkStart, density).filter((b) =>
-        isSameDay(b.startsAt, anchor),
-      );
-      const earned = items.reduce((s, b) => s + b.priceUsd, 0);
-      const label = isSameDay(anchor, new Date())
-        ? "Today"
-        : anchor.toLocaleDateString(undefined, { weekday: "long" });
-      const n = items.length;
-      return `${label} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
-    }
     if (view === "week") {
       const wkStart = startOfWeek(anchor);
-      const wkEnd = addDays(wkStart, 7);
       const items = bookingsForWeek(wkStart, density);
       const earned = items.reduce((s, b) => s + b.priceUsd, 0);
       const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
       const n = items.length;
-      void wkEnd;
       return `${rangeLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
     }
     // month
@@ -275,13 +261,9 @@ function formatWeekRange(start: Date, end: Date): string {
 
 function Header({
   subtitle,
-  view,
-  onViewChange,
   onOverflow,
 }: {
   subtitle: string;
-  view: View;
-  onViewChange: (v: View) => void;
   onOverflow: () => void;
 }) {
   const { text, borderCol, bg } = useHomeTheme();
@@ -367,56 +349,124 @@ function Header({
           <span style={{ opacity: 0.6 }}> · {subtitle.split(" · ").slice(1).join(" · ")}</span>
         </div>
       </div>
-
-      <ViewSwitcher view={view} onChange={onViewChange} />
     </div>
   );
 }
 
-function ViewSwitcher({
+/**
+ * View dropdown — replaces the segmented Day/Week/Month pill.
+ * The active date-range label gets a small chevron next to it; tapping the
+ * label or chevron drops a menu with Week / Month. No big control eating
+ * header space.
+ */
+function ViewDropdown({
   view,
   onChange,
+  label,
 }: {
   view: View;
   onChange: (v: View) => void;
+  label: string;
 }) {
   const { text, borderCol } = useHomeTheme();
-  const opts: View[] = ["day", "week", "month"];
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close on outside tap.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [open]);
+
+  const opts: { value: View; label: string }[] = [
+    { value: "week", label: "Week" },
+    { value: "month", label: "Month" },
+  ];
+
   return (
-    <div
-      className="mb-3 flex w-full rounded-full p-1"
-      style={{
-        backgroundColor: "rgba(240,235,216,0.04)",
-        border: `1px solid ${borderCol}`,
-      }}
-      role="tablist"
-    >
-      {opts.map((o) => {
-        const active = o === view;
-        return (
-          <button
-            key={o}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o)}
-            className="flex-1 rounded-full py-2 text-center transition-colors"
-            style={{
-              fontFamily: UI,
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "-0.005em",
-              backgroundColor: active ? ORANGE : "transparent",
-              color: active ? MIDNIGHT : text,
-              opacity: active ? 1 : 0.7,
-              textTransform: "capitalize",
-              border: "none",
-            }}
-          >
-            {o}
-          </button>
-        );
-      })}
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-opacity active:opacity-70"
+        style={{
+          fontFamily: UI,
+          fontSize: 16,
+          fontWeight: 700,
+          color: text,
+          letterSpacing: "-0.01em",
+          backgroundColor: "transparent",
+          border: "none",
+        }}
+      >
+        <span>{label}</span>
+        <ChevronDown
+          size={14}
+          strokeWidth={2}
+          style={{
+            opacity: 0.6,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
+          }}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute left-1/2 z-30 mt-1 -translate-x-1/2 rounded-xl py-1"
+          style={{
+            top: "100%",
+            minWidth: 132,
+            backgroundColor: NAVY_PANEL,
+            border: `1px solid ${borderCol}`,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+          }}
+        >
+          {opts.map((o) => {
+            const active = o.value === view;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors"
+                style={{
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: text,
+                  backgroundColor: "transparent",
+                  border: "none",
+                }}
+              >
+                <span>{o.label}</span>
+                {active ? (
+                  <Check size={14} strokeWidth={2.25} style={{ color: ORANGE }} />
+                ) : (
+                  <span style={{ width: 14 }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
