@@ -1542,6 +1542,7 @@ function MonthView({
                   fontSize: 13.5,
                   fontWeight: 700,
                   color: numColor,
+                  opacity: numOpacity,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
                 }}
