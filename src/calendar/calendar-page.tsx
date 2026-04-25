@@ -818,6 +818,7 @@ function DayView({
               nowBookingId={nowBookingId}
               onOpenBooking={onOpenBooking}
               onTapEmpty={onTapEmpty}
+              onTapBlock={onTapBlock}
               onTapBuffer={onTapBuffer}
               showInlineLabels
             />
@@ -1072,6 +1073,7 @@ function WeekGrid({
                 nowBookingId={nowBookingId}
                 onOpenBooking={onOpenBooking}
                 onTapEmpty={onTapEmpty}
+                onTapBlock={onTapBlock}
                 onTapBuffer={onTapBuffer}
                 showInlineLabels={isHero}
               />
