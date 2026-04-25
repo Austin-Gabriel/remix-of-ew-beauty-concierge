@@ -279,7 +279,7 @@ function useViewSubtitle(
     void availability;
     void density;
     return `${monthStart.toLocaleDateString(undefined, { month: "long" })} · ${count} bookings · ${fmtUsd(earned)}`;
-  }, [view, anchor, density, availability]);
+  }, [view, anchor, density, availability, selectedDay]);
 }
 
 function formatWeekRange(start: Date, end: Date): string {
