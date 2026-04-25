@@ -241,15 +241,24 @@ function useViewSubtitle(
   anchor: Date,
   density: ReturnType<typeof useDevState>["state"]["weekDensity"],
   availability: AvailabilityWeek,
+  selectedDay?: Date,
 ): string {
   return useMemo(() => {
     if (view === "week") {
-      const wkStart = startOfWeek(anchor);
-      const items = realBookingsForWeek(wkStart);
-      const earned = items.reduce((s, b) => s + b.priceUsd, 0);
-      const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
-      const n = items.length;
-      return `${rangeLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
+      // Per spec: subtitle reflects the SELECTED day, not the whole week.
+      const day = selectedDay ?? anchor;
+      const wkStart = startOfWeek(day);
+      const dayItems = realBookingsForWeek(wkStart).filter((b) =>
+        isSameDay(b.startsAt, day),
+      );
+      const earned = dayItems.reduce((s, b) => s + b.priceUsd, 0);
+      const dayLabel = day.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      });
+      const n = dayItems.length;
+      return `${dayLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
     }
     // month — stats are canonical-only so they match the Bookings tab.
     const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
