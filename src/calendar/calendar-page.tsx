@@ -1400,43 +1400,44 @@ function BookingBlock({
           ) : null}
         </div>
       ) : (
-        // Compact (Week)
+        // Compact (Week). Hero column gets fuller content; non-hero
+        // abbreviates to keep the seven columns scannable.
         <>
           <div
             className="truncate"
             style={{
               fontFamily: UI,
-              fontSize: 10.5,
+              fontSize: hero ? 11.5 : 10.5,
               fontWeight: 700,
               letterSpacing: "-0.01em",
               lineHeight: 1.15,
               paddingRight: item.isOnDemand ? 10 : 0,
             }}
           >
-            {item.clientFirst}
+            {hero ? item.clientFirst : (item.clientFirst[0] ?? "") + "."}
           </div>
           {h >= 30 ? (
             <div
               className="truncate"
               style={{
                 fontFamily: UI,
-                fontSize: 9.5,
+                fontSize: hero ? 10 : 9.5,
                 fontWeight: 500,
-                opacity: 0.7,
+                opacity: hero ? 0.85 : 0.65,
                 lineHeight: 1.15,
                 marginTop: 1,
               }}
             >
-              {item.service}
+              {hero ? item.service : abbrevService(item.service)}
             </div>
           ) : null}
-          {h >= 50 ? (
+          {(hero ? h >= 36 : h >= 50) ? (
             <div
               className="truncate"
               style={{
                 fontFamily: UI,
-                fontSize: 9,
-                opacity: 0.55,
+                fontSize: hero ? 9.5 : 9,
+                opacity: hero ? 0.7 : 0.55,
                 marginTop: 2,
                 fontVariantNumeric: "tabular-nums",
               }}
