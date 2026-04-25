@@ -26,6 +26,12 @@ export function startOfWeek(d: Date): Date {
   return out;
 }
 
+export function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
 export function addDays(d: Date, n: number): Date {
   const out = new Date(d);
   out.setDate(out.getDate() + n);
@@ -55,11 +61,26 @@ export function fmtTime(d: Date): string {
   return `${h}:${String(m).padStart(2, "0")} ${suf}`;
 }
 
+/** Compact time: drops :00 — "10 AM", "2:30 PM". */
+export function fmtTimeShort(d: Date): string {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const suf = h >= 12 ? "PM" : "AM";
+  h = h % 12 === 0 ? 12 : h % 12;
+  if (m === 0) return `${h} ${suf}`;
+  return `${h}:${String(m).padStart(2, "0")} ${suf}`;
+}
+
 export function fmtHourLabel(hour24: number): string {
   if (hour24 === 0) return "12 AM";
   if (hour24 === 12) return "12 PM";
   if (hour24 < 12) return `${hour24} AM`;
   return `${hour24 - 12} PM`;
+}
+
+export function fmtUsd(n: number): string {
+  if (n === 0) return "$0";
+  return "$" + Math.round(n).toLocaleString("en-US");
 }
 
 /* ---------- Travel buffer model ---------- */
@@ -99,6 +120,7 @@ export interface AvailabilityRange {
 export type AvailabilityWeek = Record<number, AvailabilityRange[]>;
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 export const FULL_DAY_LABELS = [
   "Sunday",
   "Monday",
@@ -111,6 +133,10 @@ export const FULL_DAY_LABELS = [
 
 export function dayShort(idx: number): string {
   return DAY_LABELS[idx] ?? "";
+}
+
+export function dayInitial(idx: number): string {
+  return DAY_INITIALS[idx] ?? "";
 }
 
 const range = (h1: number, h2: number): AvailabilityRange => ({
@@ -209,15 +235,42 @@ const NEIGHBORHOODS = [
   "Williamsburg, Brooklyn",
 ];
 
+const SERVICE_PRICES: Record<CanonicalService, number> = {
+  "Silk press": 175,
+  Trim: 65,
+  Retwist: 95,
+  "Knotless braids": 280,
+  "Box braids": 320,
+  Cornrows: 110,
+  Crochet: 220,
+  "Wash and go": 75,
+  Blowout: 90,
+  "Color touch-up": 180,
+};
+
+const SERVICE_DURATIONS: Record<CanonicalService, number> = {
+  "Silk press": 90,
+  Trim: 45,
+  Retwist: 75,
+  "Knotless braids": 240,
+  "Box braids": 360,
+  Cornrows: 75,
+  Crochet: 180,
+  "Wash and go": 60,
+  Blowout: 60,
+  "Color touch-up": 120,
+};
+
 function rng(seed: number) {
   let s = seed >>> 0;
+  if (s === 0) s = 1;
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 0xffffffff;
   };
 }
 
-interface Synth {
+export interface CalendarBooking {
   id: string;
   clientFirst: string;
   service: CanonicalService;
@@ -225,15 +278,45 @@ interface Synth {
   durationMin: number;
   neighborhood: string;
   isOnDemand: boolean;
+  priceUsd: number;
+}
+
+/**
+ * Per-day target booking counts for each density preset.
+ * Empty = 0 across the whole week.
+ * Light = 3–4 bookings spread across 3–4 weekdays.
+ * Typical = 12–14 bookings, 2–3/day Tue–Sat.
+ * Packed = 25–28 bookings, 4–5/day Tue–Sat, 2–3 on Mon/Sun.
+ *
+ * Index 0 = Sun … 6 = Sat.
+ */
+function densityShape(density: DevWeekDensity): number[] {
+  switch (density) {
+    case "empty":
+      return [0, 0, 0, 0, 0, 0, 0];
+    case "light":
+      // 3–4 bookings, spread across 3–4 weekdays. Weekends free.
+      return [0, 1, 0, 1, 1, 1, 0]; // Mon, Wed, Thu, Fri = 4 total
+    case "typical":
+      // 2–3 on Tue–Sat, lighter Mon/Sun. Total ~12–14.
+      return [0, 1, 3, 2, 3, 3, 2]; // = 14
+    case "packed":
+      // 4–5 every Tue–Sat, 2–3 Mon/Sun. Total ~25–28.
+      return [2, 3, 5, 4, 5, 5, 3]; // = 27
+    case "auto":
+    default:
+      return [0, 1, 2, 2, 3, 3, 1]; // ~12, balanced default
+  }
 }
 
 export function bookingsForWeek(
   weekStart: Date,
   density: DevWeekDensity,
-): Synth[] {
-  // Always include real bookings that fall in this week.
+): CalendarBooking[] {
   const weekEnd = addDays(weekStart, 7);
-  const real: Synth[] = [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
+
+  // Always include real bookings that fall in this week.
+  const real: CalendarBooking[] = [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
     .filter((b) => b.startsAt >= weekStart && b.startsAt < weekEnd)
     .map((b) => ({
       id: b.id,
@@ -242,52 +325,117 @@ export function bookingsForWeek(
       startsAt: b.startsAt,
       durationMin: b.durationMin,
       neighborhood: b.neighborhood,
-      isOnDemand: b.status === "pending" ? false : false,
+      isOnDemand: false,
+      priceUsd: b.priceUsd,
     }));
 
-  if (density === "auto" || density === "empty") {
-    return density === "empty" ? [] : real;
-  }
+  if (density === "empty") return [];
+  if (density === "auto") return real.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
-  const perDay =
-    density === "light" ? [1, 2] : density === "typical" ? [3, 4] : [5, 6];
-  const r = rng(weekStart.getTime() / 86400000);
-  const synthesized: Synth[] = [];
+  const shape = densityShape(density);
+  const r = rng(Math.floor(weekStart.getTime() / 86400000));
+  const synthesized: CalendarBooking[] = [];
+
   for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
     const day = addDays(weekStart, dayIdx);
-    // Skip Sundays for non-packed presets to feel realistic.
-    if (dayIdx === 0 && density !== "packed") continue;
-    const count = Math.floor(r() * (perDay[1] - perDay[0] + 1)) + perDay[0];
-    let cursorMin = 9 * 60 + Math.floor(r() * 60); // start ~9-10am
-    for (let i = 0; i < count; i++) {
-      const dur = [60, 75, 90, 120, 180, 240][Math.floor(r() * 6)];
+    const target = shape[dayIdx];
+    if (target === 0) continue;
+
+    // Existing real bookings on this day count toward the target.
+    const realOnDay = real.filter((b) => isSameDay(b.startsAt, day)).length;
+    const need = Math.max(0, target - realOnDay);
+
+    // Lay them out across 9 AM → 7 PM with realistic gaps.
+    let cursorMin = 9 * 60 + Math.floor(r() * 45); // start ~9–9:45
+    for (let i = 0; i < need; i++) {
+      const svcIdx = Math.floor(r() * CANONICAL_SERVICES.length);
+      const svc = CANONICAL_SERVICES[svcIdx];
+      // Slightly compress duration in packed mode so they all fit.
+      const baseDur = SERVICE_DURATIONS[svc];
+      const dur = density === "packed" ? Math.min(baseDur, 90) : baseDur;
       if (cursorMin + dur > 21 * 60) break;
       const startsAt = new Date(day);
-      startsAt.setHours(0, Math.round(cursorMin / 5) * 5, 0, 0);
+      startsAt.setHours(0, Math.round(cursorMin / 15) * 15, 0, 0);
       const isOnDemand = r() < 0.18;
       synthesized.push({
-        id: `synth-${dayIdx}-${i}-${weekStart.getTime()}`,
+        id: `synth-${weekStart.getTime()}-${dayIdx}-${i}`,
         clientFirst: FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)],
-        service:
-          CANONICAL_SERVICES[Math.floor(r() * CANONICAL_SERVICES.length)],
+        service: svc,
         startsAt,
         durationMin: dur,
-        neighborhood:
-          NEIGHBORHOODS[Math.floor(r() * NEIGHBORHOODS.length)],
+        neighborhood: NEIGHBORHOODS[Math.floor(r() * NEIGHBORHOODS.length)],
         isOnDemand,
+        priceUsd: SERVICE_PRICES[svc],
       });
-      const travelGap = 25 + Math.floor(r() * 30);
+      const travelGap = density === "packed"
+        ? 20 + Math.floor(r() * 15)
+        : 30 + Math.floor(r() * 30);
       cursorMin += dur + travelGap;
     }
   }
+
   return [...real, ...synthesized].sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
 }
 
+/* ---------- Aggregates for stat strips ---------- */
+
+export interface DayStats {
+  count: number;
+  earnedUsd: number;
+  /** First upcoming booking's start time, or null. */
+  nextUpAt: Date | null;
+}
+
+export function statsForDay(items: CalendarBooking[], now: Date): DayStats {
+  const onDay = items.filter((b) => isSameDay(b.startsAt, now));
+  const earned = onDay.reduce((sum, b) => sum + b.priceUsd, 0);
+  const upcoming = onDay
+    .filter((b) => b.startsAt.getTime() >= now.getTime())
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  return {
+    count: onDay.length,
+    earnedUsd: earned,
+    nextUpAt: upcoming[0]?.startsAt ?? null,
+  };
+}
+
+export interface RangeStats {
+  count: number;
+  earnedUsd: number;
+  /** Booked % of available work hours in the range. */
+  bookedPct: number;
+}
+
+export function statsForRange(
+  items: CalendarBooking[],
+  rangeStart: Date,
+  rangeEnd: Date,
+  availability: AvailabilityWeek,
+): RangeStats {
+  const inRange = items.filter(
+    (b) => b.startsAt >= rangeStart && b.startsAt < rangeEnd,
+  );
+  const earned = inRange.reduce((sum, b) => sum + b.priceUsd, 0);
+  const bookedMin = inRange.reduce((sum, b) => sum + b.durationMin, 0);
+
+  // Available minutes across the range.
+  let availMin = 0;
+  const days = Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000);
+  for (let i = 0; i < days; i++) {
+    const day = addDays(rangeStart, i);
+    const ranges = availability[day.getDay()] ?? [];
+    for (const r of ranges) availMin += r.endMin - r.startMin;
+  }
+
+  const pct = availMin > 0 ? Math.min(100, Math.round((bookedMin / availMin) * 100)) : 0;
+  return { count: inRange.length, earnedUsd: earned, bookedPct: pct };
+}
+
 /* ---------- Compute travel buffers between consecutive bookings same day ---------- */
 
-export function travelBuffersFor(items: Synth[]): TravelBuffer[] {
+export function travelBuffersFor(items: CalendarBooking[]): TravelBuffer[] {
   const out: TravelBuffer[] = [];
   for (let i = 1; i < items.length; i++) {
     const prev = items[i - 1];
@@ -351,13 +499,102 @@ function block(
   return { id: `blk-${day.getTime()}-${h1}`, startsAt: s, endsAt: e, reason };
 }
 
-/* ---------- Re-export the shape consumers use ---------- */
+/* ---------- Free-slot synthesis for Day view "Free" / "Lunch" pills ---------- */
 
-export type { Synth as CalendarBooking };
+export interface FreeSlot {
+  id: string;
+  startsAt: Date;
+  endsAt: Date;
+  /** "Free" or "Lunch · 30 min" — short label rendered inside the dashed pill. */
+  label: string;
+  kind: "free" | "lunch";
+}
+
+/**
+ * Walk a day's availability and emit dashed "Free" / "Lunch" slots in the
+ * gaps between bookings (and travel buffers). Only used in Day view.
+ *
+ * - Gaps ≥ 90 min → "Free"
+ * - Gaps 25–60 min around midday → "Lunch · 30 min"
+ */
+export function freeSlotsFor(
+  day: Date,
+  items: CalendarBooking[],
+  buffers: TravelBuffer[],
+  blocks: BlockedSlot[],
+  availability: AvailabilityRange[],
+): FreeSlot[] {
+  if (availability.length === 0) return [];
+  const out: FreeSlot[] = [];
+  // Build a list of "occupied" intervals (mins from midnight) on this day.
+  type Iv = { s: number; e: number };
+  const occupied: Iv[] = [];
+  for (const it of items) {
+    if (!isSameDay(it.startsAt, day)) continue;
+    const s = it.startsAt.getHours() * 60 + it.startsAt.getMinutes();
+    occupied.push({ s, e: s + it.durationMin });
+  }
+  for (const b of buffers) {
+    if (!isSameDay(b.startsAt, day)) continue;
+    const s = b.startsAt.getHours() * 60 + b.startsAt.getMinutes();
+    occupied.push({ s, e: s + b.minutes });
+  }
+  for (const b of blocks) {
+    if (!isSameDay(b.startsAt, day)) continue;
+    const s = b.startsAt.getHours() * 60 + b.startsAt.getMinutes();
+    const e = b.endsAt.getHours() * 60 + b.endsAt.getMinutes();
+    occupied.push({ s, e });
+  }
+  occupied.sort((a, b) => a.s - b.s);
+
+  // Walk each availability range and find gaps.
+  for (const r of availability) {
+    let cursor = r.startMin;
+    for (const iv of occupied) {
+      if (iv.e <= r.startMin || iv.s >= r.endMin) continue;
+      if (iv.s > cursor) {
+        emitGap(out, day, cursor, iv.s);
+      }
+      cursor = Math.max(cursor, iv.e);
+    }
+    if (cursor < r.endMin) emitGap(out, day, cursor, r.endMin);
+  }
+  return out;
+}
+
+function emitGap(out: FreeSlot[], day: Date, sMin: number, eMin: number) {
+  const gap = eMin - sMin;
+  if (gap < 25) return;
+  const start = new Date(day);
+  start.setHours(0, sMin, 0, 0);
+  const end = new Date(day);
+  end.setHours(0, eMin, 0, 0);
+  // Lunch heuristic: short midday gap (≤ 60 min) crossing 12–2 PM.
+  const isMidday = sMin >= 11 * 60 && eMin <= 14 * 60 + 30;
+  if (gap >= 25 && gap <= 60 && isMidday) {
+    out.push({
+      id: `free-${day.getTime()}-${sMin}`,
+      startsAt: start,
+      endsAt: end,
+      label: `Lunch · ${gap} min`,
+      kind: "lunch",
+    });
+    return;
+  }
+  if (gap >= 90) {
+    out.push({
+      id: `free-${day.getTime()}-${sMin}`,
+      startsAt: start,
+      endsAt: end,
+      label: "Free",
+      kind: "free",
+    });
+  }
+}
 
 /** Find the canonical Booking by id so we can route to /bookings/$id. */
 export function isRealBookingId(id: string): boolean {
-  if (id.startsWith("synth-") || id.startsWith("blk-")) return false;
+  if (id.startsWith("synth-") || id.startsWith("blk-") || id.startsWith("free-")) return false;
   return Boolean(
     ALL_BOOKINGS.find((b) => b.id === id) ??
       HISTORY_BOOKINGS.find((b) => b.id === id),

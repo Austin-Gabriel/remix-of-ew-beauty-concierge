@@ -1,6 +1,17 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bell, MoreHorizontal, ChevronLeft, ChevronRight, X, Zap } from "lucide-react";
+import {
+  Bell,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Zap,
+  Clock,
+  CalendarOff,
+  Activity,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import { HomeShell, useHomeTheme, HOME_SANS } from "@/home/home-shell";
 import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
 import { ActiveBookingStrip } from "@/components/active-booking-strip";
@@ -9,42 +20,48 @@ import {
   addDays,
   availabilityFor,
   bookingsForWeek,
-  dayShort,
+  dayInitial,
   fmtHourLabel,
   fmtTime,
+  fmtTimeShort,
+  fmtUsd,
+  freeSlotsFor,
   FULL_DAY_LABELS,
   isRealBookingId,
   isSameDay,
   seedBlocks,
+  startOfDay,
   startOfWeek,
-  todayHoursLabel,
+  statsForDay,
+  statsForRange,
   travelBuffersFor,
   weekDays,
   type AvailabilityWeek,
   type AvailabilityRange,
   type BlockedSlot,
   type CalendarBooking,
+  type FreeSlot,
   type TravelBuffer,
 } from "@/calendar/calendar-data";
 
 /**
- * Calendar — working surface showing the SHAPE of a pro's time.
- *
- *   Week (hero) · Day · Month
- *
- * Reads bookings from /src/data/mock-bookings.ts. Tapping a booking routes to
- * /bookings/$id. Plugs into the existing dev-state toggle; never duplicates
- * the lifecycle, detail, or settings surfaces.
+ * Calendar — the working surface that shows the SHAPE of a pro's time.
+ *   Day · Week (hero) · Month
+ * Reads bookings from /src/data/mock-bookings.ts. Tapping any booking routes
+ * to /bookings/$id. Plugs into the existing dev-state toggle.
  */
 
 const UI = `Inter, ${HOME_SANS}`;
 const ORANGE = "#FF823F";
 const CREAM = "#F0EBD8";
 const MIDNIGHT = "#061C27";
+const NAVY_PANEL = "#0B2330";
 
 type View = "day" | "week" | "month";
 
-const HOUR_HEIGHT = 56; // px per hour in week/day grid
+/* Grid geometry */
+const HOUR_HEIGHT_DAY = 64;
+const HOUR_HEIGHT_WEEK = 52;
 const GUTTER_W = 44;
 const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 22;
@@ -72,12 +89,14 @@ export function CalendarPage() {
   const av = useMemo(() => availabilityFor(dev.availability), [dev.availability]);
   const today = new Date();
 
+  // Subtitle string per view.
+  const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
+
   return (
     <HomeShell>
       <ActiveBookingStrip />
       <Header
-        availability={av}
-        today={today}
+        subtitle={subtitle}
         view={view}
         onViewChange={setView}
         onOverflow={() => setOverflowOpen(true)}
@@ -127,6 +146,7 @@ export function CalendarPage() {
             anchor={anchor}
             onAnchorChange={setAnchor}
             density={dev.weekDensity}
+            availability={av}
             onTapDay={(d) => {
               setAnchor(d);
               setView("day");
@@ -183,26 +203,86 @@ export function CalendarPage() {
 }
 
 /* =====================================================================
-   HEADER
+   SUBTITLE (auto-derived per view)
+===================================================================== */
+
+function useViewSubtitle(
+  view: View,
+  anchor: Date,
+  density: ReturnType<typeof useDevState>["state"]["weekDensity"],
+  availability: AvailabilityWeek,
+): string {
+  return useMemo(() => {
+    if (view === "day") {
+      const wkStart = startOfWeek(anchor);
+      const items = bookingsForWeek(wkStart, density).filter((b) =>
+        isSameDay(b.startsAt, anchor),
+      );
+      const earned = items.reduce((s, b) => s + b.priceUsd, 0);
+      const label = isSameDay(anchor, new Date())
+        ? "Today"
+        : anchor.toLocaleDateString(undefined, { weekday: "long" });
+      const n = items.length;
+      return `${label} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
+    }
+    if (view === "week") {
+      const wkStart = startOfWeek(anchor);
+      const wkEnd = addDays(wkStart, 7);
+      const items = bookingsForWeek(wkStart, density);
+      const earned = items.reduce((s, b) => s + b.priceUsd, 0);
+      const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
+      const n = items.length;
+      void wkEnd;
+      return `${rangeLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
+    }
+    // month
+    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
+    let count = 0;
+    let earned = 0;
+    let cursor = startOfWeek(monthStart);
+    while (cursor < monthEnd) {
+      const items = bookingsForWeek(cursor, density);
+      items.forEach((b) => {
+        if (b.startsAt >= monthStart && b.startsAt < monthEnd) {
+          count += 1;
+          earned += b.priceUsd;
+        }
+      });
+      cursor = addDays(cursor, 7);
+    }
+    void availability;
+    return `${monthStart.toLocaleDateString(undefined, { month: "long" })} · ${count} bookings · ${fmtUsd(earned)}`;
+  }, [view, anchor, density, availability]);
+}
+
+function formatWeekRange(start: Date, end: Date): string {
+  const sameMonth = start.getMonth() === end.getMonth();
+  const sm = start.toLocaleDateString(undefined, { month: "short" });
+  const em = end.toLocaleDateString(undefined, { month: "short" });
+  return sameMonth
+    ? `${sm} ${start.getDate()} – ${end.getDate()}`
+    : `${sm} ${start.getDate()} – ${em} ${end.getDate()}`;
+}
+
+/* =====================================================================
+   HEADER (shared)
 ===================================================================== */
 
 function Header({
-  availability,
-  today,
+  subtitle,
   view,
   onViewChange,
   onOverflow,
 }: {
-  availability: AvailabilityWeek;
-  today: Date;
+  subtitle: string;
   view: View;
   onViewChange: (v: View) => void;
   onOverflow: () => void;
 }) {
   const { text, borderCol, bg } = useHomeTheme();
-  const hours = todayHoursLabel(availability, today);
   return (
-    <div className="px-4 pt-2" style={{ borderBottom: `1px solid ${borderCol}` }}>
+    <div className="px-4 pt-2">
       <div className="flex items-center justify-between" style={{ height: 44 }}>
         <button
           type="button"
@@ -259,11 +339,12 @@ function Header({
         <h1
           style={{
             fontFamily: UI,
-            fontSize: 22,
+            fontSize: 30,
             fontWeight: 700,
             color: text,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.025em",
             margin: 0,
+            lineHeight: 1.05,
           }}
         >
           Calendar
@@ -271,14 +352,15 @@ function Header({
         <div
           style={{
             fontFamily: UI,
-            fontSize: 12.5,
+            fontSize: 13,
             color: text,
-            opacity: 0.6,
-            marginTop: 3,
+            opacity: 0.55,
+            marginTop: 6,
             letterSpacing: "-0.005em",
           }}
         >
-          {hours}
+          {subtitle.split(" · ")[0]}
+          <span style={{ opacity: 0.6 }}> · {subtitle.split(" · ").slice(1).join(" · ")}</span>
         </div>
       </div>
 
@@ -314,15 +396,15 @@ function ViewSwitcher({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o)}
-            className="flex-1 rounded-full py-1.5 text-center transition-colors"
+            className="flex-1 rounded-full py-2 text-center transition-colors"
             style={{
               fontFamily: UI,
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: "-0.005em",
               backgroundColor: active ? ORANGE : "transparent",
               color: active ? MIDNIGHT : text,
-              opacity: active ? 1 : 0.65,
+              opacity: active ? 1 : 0.7,
               textTransform: "capitalize",
               border: "none",
             }}
@@ -336,229 +418,119 @@ function ViewSwitcher({
 }
 
 /* =====================================================================
-   WEEK VIEW (hero)
+   STAT STRIPS
 ===================================================================== */
 
-function WeekView({
-  anchor,
-  onAnchorChange,
-  availability,
-  blockedPreset,
-  density,
-  onOpenBooking,
-  onTapEmpty,
-  onTapBuffer,
-  onTapDay,
+function DateNavRow({
+  label,
+  onPrev,
+  onNext,
 }: {
-  anchor: Date;
-  onAnchorChange: (d: Date) => void;
-  availability: AvailabilityWeek;
-  blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
-  density: ReturnType<typeof useDevState>["state"]["weekDensity"];
-  onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
-  onTapBuffer: (b: TravelBuffer) => void;
-  onTapDay: (d: Date) => void;
+  label: string;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
-  const wkStart = startOfWeek(anchor);
-  const days = weekDays(wkStart);
-  const today = new Date();
-  const items = useMemo(() => bookingsForWeek(wkStart, density), [wkStart, density]);
-  const buffers = useMemo(() => travelBuffersFor(items), [items]);
-  const blocks = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
-  const { text } = useHomeTheme();
-
+  const { text, borderCol } = useHomeTheme();
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Week strip */}
-      <WeekStrip
-        days={days}
-        today={today}
-        items={items}
-        anchor={anchor}
-        onPrev={() => onAnchorChange(addDays(anchor, -7))}
-        onNext={() => onAnchorChange(addDays(anchor, 7))}
-        onTapDay={onTapDay}
-      />
-
-      <div
-        className="relative flex-1 overflow-y-auto"
+    <div className="flex items-center justify-between px-4 pb-3">
+      <button
+        type="button"
+        onClick={onPrev}
+        aria-label="Previous"
+        className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
         style={{
-          backgroundColor: "rgba(0,0,0,0.18)",
+          width: 32,
+          height: 32,
+          color: text,
+          backgroundColor: "rgba(240,235,216,0.04)",
+          border: `1px solid ${borderCol}`,
         }}
       >
-        <div
-          className="relative"
-          style={{
-            height: GRID_HOURS * HOUR_HEIGHT,
-            paddingLeft: GUTTER_W,
-          }}
-        >
-          {/* Hour gutter + lines */}
-          <HourLines />
-
-          {/* 7 day columns */}
-          <div
-            className="absolute inset-0"
-            style={{ left: GUTTER_W, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}
-          >
-            {days.map((d, i) => (
-              <DayColumn
-                key={i}
-                day={d}
-                isToday={isSameDay(d, today)}
-                isPast={d < new Date(today.toDateString())}
-                availability={availability[d.getDay()] ?? []}
-                items={items.filter((b) => isSameDay(b.startsAt, d))}
-                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-                onOpenBooking={onOpenBooking}
-                onTapEmpty={onTapEmpty}
-                onTapBuffer={onTapBuffer}
-                compact
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+        <ChevronLeft size={16} />
+      </button>
       <div
         style={{
           fontFamily: UI,
-          fontSize: 10.5,
+          fontSize: 16,
+          fontWeight: 700,
           color: text,
-          opacity: 0.45,
-          textAlign: "center",
-          padding: "8px 0 4px",
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
+          letterSpacing: "-0.01em",
         }}
       >
-        Tap empty space to block · tap travel to extend
+        {label}
       </div>
+      <button
+        type="button"
+        onClick={onNext}
+        aria-label="Next"
+        className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
+        style={{
+          width: 32,
+          height: 32,
+          color: text,
+          backgroundColor: "rgba(240,235,216,0.04)",
+          border: `1px solid ${borderCol}`,
+        }}
+      >
+        <ChevronRight size={16} />
+      </button>
     </div>
   );
 }
 
-function WeekStrip({
-  days,
-  today,
-  items,
-  anchor,
-  onPrev,
-  onNext,
-  onTapDay,
+function StatStrip({
+  cols,
 }: {
-  days: Date[];
-  today: Date;
-  items: CalendarBooking[];
-  anchor: Date;
-  onPrev: () => void;
-  onNext: () => void;
-  onTapDay: (d: Date) => void;
+  cols: { value: string; label: string; valueAccent?: boolean }[];
 }) {
   const { text, borderCol } = useHomeTheme();
-  const monthLabel = days[0].toLocaleString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
   return (
-    <div className="px-4 pb-2 pt-3" style={{ borderBottom: `1px solid ${borderCol}` }}>
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          aria-label="Previous week"
-          onClick={onPrev}
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronLeft size={16} />
-        </button>
+    <div
+      className="mx-4 mb-3 flex items-stretch rounded-2xl"
+      style={{
+        backgroundColor: "rgba(240,235,216,0.035)",
+        border: `1px solid ${borderCol}`,
+        padding: "14px 8px",
+      }}
+    >
+      {cols.map((c, i) => (
         <div
+          key={i}
+          className="flex flex-1 flex-col items-center justify-center"
           style={{
-            fontFamily: UI,
-            fontSize: 13,
-            fontWeight: 600,
-            color: text,
-            opacity: 0.85,
-            letterSpacing: "-0.005em",
+            borderLeft: i === 0 ? "none" : "1px solid rgba(240,235,216,0.08)",
+            padding: "0 4px",
           }}
         >
-          {monthLabel}
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 20,
+              fontWeight: 700,
+              color: c.valueAccent ? ORANGE : text,
+              letterSpacing: "-0.015em",
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1.05,
+            }}
+          >
+            {c.value}
+          </div>
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 9.5,
+              fontWeight: 600,
+              color: text,
+              opacity: 0.5,
+              marginTop: 5,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            {c.label}
+          </div>
         </div>
-        <button
-          type="button"
-          aria-label="Next week"
-          onClick={onNext}
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((d, i) => {
-          const isToday = isSameDay(d, today);
-          const isAnchor = isSameDay(d, anchor);
-          const count = items.filter((b) => isSameDay(b.startsAt, d)).length;
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onTapDay(d)}
-              className="relative flex flex-col items-center justify-center rounded-xl py-1.5 transition-opacity active:opacity-70"
-              style={{
-                backgroundColor:
-                  isAnchor && !isToday ? "rgba(255,130,63,0.08)" : "transparent",
-                border: "1px solid transparent",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: UI,
-                  fontSize: 9.5,
-                  fontWeight: 600,
-                  color: text,
-                  opacity: 0.55,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                }}
-              >
-                {dayShort(i)}
-              </span>
-              <span
-                className="mt-1 flex items-center justify-center rounded-full"
-                style={{
-                  width: 28,
-                  height: 28,
-                  fontFamily: UI,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: isToday ? MIDNIGHT : text,
-                  backgroundColor: isToday ? ORANGE : "transparent",
-                  border: isToday ? "none" : "1px solid transparent",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {d.getDate()}
-              </span>
-              {count > 0 ? (
-                <span
-                  aria-hidden
-                  className="absolute"
-                  style={{
-                    bottom: 3,
-                    width: 4,
-                    height: 4,
-                    borderRadius: 9999,
-                    backgroundColor: isToday ? MIDNIGHT : ORANGE,
-                    opacity: isToday ? 0.7 : 0.85,
-                  }}
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      ))}
     </div>
   );
 }
@@ -567,14 +539,14 @@ function WeekStrip({
    GRID PRIMITIVES
 ===================================================================== */
 
-function HourLines() {
+function HourLines({ hourHeight }: { hourHeight: number }) {
   const { text } = useHomeTheme();
   const hours: number[] = [];
   for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
   return (
     <div className="absolute inset-0">
       {hours.map((h, i) => {
-        const top = (h - GRID_START_HOUR) * HOUR_HEIGHT;
+        const top = (h - GRID_START_HOUR) * hourHeight;
         return (
           <div key={h}>
             <div
@@ -587,16 +559,15 @@ function HourLines() {
                 backgroundColor: "rgba(240,235,216,0.08)",
               }}
             />
-            {/* 30-min divider */}
             {i < hours.length - 1 ? (
               <div
                 className="absolute"
                 style={{
-                  top: top + HOUR_HEIGHT / 2,
+                  top: top + hourHeight / 2,
                   left: 0,
                   right: 0,
                   height: 1,
-                  backgroundColor: "rgba(240,235,216,0.04)",
+                  backgroundColor: "rgba(240,235,216,0.035)",
                 }}
               />
             ) : null}
@@ -630,343 +601,12 @@ function minutesIntoGrid(d: Date): number {
   return Math.max(0, m);
 }
 
-function pxFor(min: number): number {
-  return (min / 60) * HOUR_HEIGHT;
-}
-
-function DayColumn({
-  day,
-  isToday,
-  isPast,
-  availability,
-  items,
-  buffers,
-  blocks,
-  onOpenBooking,
-  onTapEmpty,
-  onTapBuffer,
-  compact,
-}: {
-  day: Date;
-  isToday: boolean;
-  isPast: boolean;
-  availability: AvailabilityRange[];
-  items: CalendarBooking[];
-  buffers: TravelBuffer[];
-  blocks: BlockedSlot[];
-  onOpenBooking: (id: string) => void;
-  onTapEmpty: (start: Date) => void;
-  onTapBuffer: (b: TravelBuffer) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className="relative"
-      style={{
-        borderLeft: "1px solid rgba(240,235,216,0.06)",
-      }}
-    >
-      {/* Outside-hours base tint (cooler) — actually the column bg */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{ backgroundColor: "rgba(240,235,216,0.015)" }}
-      />
-      {/* Inside-hours warmer band(s) */}
-      {availability.map((r, i) => {
-        const top = pxFor(r.startMin - GRID_START_HOUR * 60);
-        const h = pxFor(r.endMin - r.startMin);
-        return (
-          <div
-            key={i}
-            aria-hidden
-            className="absolute left-0 right-0"
-            style={{
-              top,
-              height: h,
-              backgroundColor: "rgba(255,130,63,0.045)",
-              borderTop: "1px dashed rgba(255,130,63,0.10)",
-              borderBottom: "1px dashed rgba(255,130,63,0.10)",
-            }}
-          />
-        );
-      })}
-
-      {/* Tap-to-block layer (under blocks/items so they capture taps first). */}
-      <button
-        type="button"
-        aria-label="Block time"
-        onClick={(e) => {
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const y = e.clientY - rect.top;
-          const minutesFromTop =
-            Math.round(((y / HOUR_HEIGHT) * 60) / 15) * 15;
-          const start = new Date(day);
-          start.setHours(GRID_START_HOUR, 0, 0, 0);
-          start.setMinutes(start.getMinutes() + minutesFromTop);
-          onTapEmpty(start);
-        }}
-        className="absolute inset-0 cursor-pointer"
-        style={{ background: "transparent", border: "none" }}
-      />
-
-      {/* Now-line */}
-      {isToday ? <NowLine /> : null}
-
-      {/* Blocks (under bookings so a real booking visually wins) */}
-      {blocks.map((b) => (
-        <BlockBlock key={b.id} block={b} compact={compact} />
-      ))}
-
-      {/* Travel buffers */}
-      {buffers.map((b) => (
-        <BufferBlock
-          key={b.id}
-          buffer={b}
-          onTap={() => onTapBuffer(b)}
-          compact={compact}
-        />
-      ))}
-
-      {/* Bookings */}
-      {items.map((it) => (
-        <BookingBlock
-          key={it.id}
-          item={it}
-          desaturate={isPast}
-          onTap={() => onOpenBooking(it.id)}
-          compact={compact}
-        />
-      ))}
-    </div>
-  );
-}
-
-function NowLine() {
-  const now = new Date();
-  const top = pxFor(minutesIntoGrid(now));
-  return (
-    <div
-      aria-hidden
-      className="absolute left-0 right-0 z-10"
-      style={{ top }}
-    >
-      <div
-        style={{
-          height: 1.5,
-          backgroundColor: ORANGE,
-          boxShadow: "0 0 8px rgba(255,130,63,0.5)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: -3,
-          top: -3,
-          width: 7,
-          height: 7,
-          borderRadius: 9999,
-          backgroundColor: ORANGE,
-        }}
-      />
-    </div>
-  );
-}
-
-function BookingBlock({
-  item,
-  desaturate,
-  onTap,
-  compact,
-}: {
-  item: CalendarBooking;
-  desaturate: boolean;
-  onTap: () => void;
-  compact?: boolean;
-}) {
-  const top = pxFor(minutesIntoGrid(item.startsAt));
-  const h = Math.max(28, pxFor(item.durationMin));
-  const tiny = h < 44;
-  const time = `${fmtTime(item.startsAt)} – ${fmtTime(
-    new Date(item.startsAt.getTime() + item.durationMin * 60_000),
-  )}`;
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onTap();
-      }}
-      className="absolute z-[2] overflow-hidden text-left transition-opacity active:opacity-80"
-      style={{
-        top,
-        height: h,
-        left: 2,
-        right: 2,
-        borderRadius: 6,
-        backgroundColor: desaturate ? "rgba(240,235,216,0.55)" : CREAM,
-        color: MIDNIGHT,
-        padding: compact ? "4px 5px" : "6px 8px",
-        boxShadow: "0 1px 0 rgba(0,0,0,0.15)",
-        border: "1px solid rgba(6,28,39,0.18)",
-        opacity: desaturate ? 0.7 : 1,
-      }}
-    >
-      {item.isOnDemand ? (
-        <Zap
-          size={9}
-          strokeWidth={2.5}
-          className="absolute"
-          style={{ top: 3, right: 3, color: ORANGE }}
-        />
-      ) : null}
-      <div
-        className="truncate"
-        style={{
-          fontFamily: UI,
-          fontSize: compact ? 10.5 : 12,
-          fontWeight: 700,
-          letterSpacing: "-0.01em",
-          lineHeight: 1.15,
-        }}
-      >
-        {item.clientFirst}
-      </div>
-      {!tiny ? (
-        <div
-          className="truncate"
-          style={{
-            fontFamily: UI,
-            fontSize: compact ? 9.5 : 11,
-            fontWeight: 500,
-            opacity: 0.75,
-            marginTop: 1,
-            lineHeight: 1.15,
-          }}
-        >
-          {item.service}
-        </div>
-      ) : null}
-      {h >= 60 ? (
-        <div
-          className="truncate"
-          style={{
-            fontFamily: UI,
-            fontSize: compact ? 9 : 10.5,
-            opacity: 0.6,
-            marginTop: 2,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {time}
-        </div>
-      ) : null}
-      {h >= 88 && !compact ? (
-        <div
-          className="truncate"
-          style={{
-            fontFamily: UI,
-            fontSize: 10,
-            opacity: 0.55,
-            marginTop: 2,
-          }}
-        >
-          {item.neighborhood.split(",")[0]}
-        </div>
-      ) : null}
-    </button>
-  );
-}
-
-function BufferBlock({
-  buffer,
-  onTap,
-  compact,
-}: {
-  buffer: TravelBuffer;
-  onTap: () => void;
-  compact?: boolean;
-}) {
-  const top = pxFor(minutesIntoGrid(buffer.startsAt));
-  const h = Math.max(14, pxFor(buffer.minutes));
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onTap();
-      }}
-      className="absolute z-[1] flex items-center justify-center overflow-hidden truncate text-left transition-opacity active:opacity-70"
-      style={{
-        top,
-        height: h,
-        left: 2,
-        right: 2,
-        borderRadius: 4,
-        backgroundColor: "rgba(240,235,216,0.08)",
-        border: "1px solid rgba(240,235,216,0.12)",
-        color: CREAM,
-        padding: "2px 4px",
-        fontFamily: UI,
-        fontSize: compact ? 9 : 10,
-        fontWeight: 500,
-        letterSpacing: "-0.005em",
-        opacity: 0.85,
-      }}
-    >
-      <span className="truncate">
-        {compact
-          ? `${buffer.minutes}m · ${buffer.miles}mi`
-          : `Travel · ${buffer.minutes} min · ${buffer.miles} mi`}
-      </span>
-    </button>
-  );
-}
-
-function BlockBlock({ block, compact }: { block: BlockedSlot; compact?: boolean }) {
-  const top = pxFor(minutesIntoGrid(block.startsAt));
-  const h = Math.max(
-    18,
-    pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000),
-  );
-  return (
-    <div
-      className="absolute z-[2] overflow-hidden"
-      style={{
-        top,
-        height: h,
-        left: 2,
-        right: 2,
-        borderRadius: 5,
-        backgroundColor: "rgba(6,28,39,0.55)",
-        border: "1px solid rgba(240,235,216,0.18)",
-        backgroundImage:
-          "repeating-linear-gradient(135deg, rgba(240,235,216,0.10) 0 4px, transparent 4px 8px)",
-        padding: compact ? "3px 4px" : "5px 7px",
-        color: CREAM,
-      }}
-    >
-      {block.reason && h >= 24 ? (
-        <span
-          className="truncate"
-          style={{
-            display: "block",
-            fontFamily: UI,
-            fontSize: compact ? 9.5 : 11,
-            fontWeight: 600,
-            opacity: 0.8,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {block.reason}
-        </span>
-      ) : null}
-    </div>
-  );
+function pxFor(min: number, hourHeight: number): number {
+  return (min / 60) * hourHeight;
 }
 
 /* =====================================================================
-   DAY VIEW
+   DAY VIEW (per screenshot 1)
 ===================================================================== */
 
 function DayView({
@@ -999,52 +639,47 @@ function DayView({
     () => seedBlocks(wkStart, blockedPreset).filter((b) => isSameDay(b.startsAt, anchor)),
     [wkStart, blockedPreset, anchor],
   );
-  const { text, borderCol } = useHomeTheme();
+  const dayAv = availability[anchor.getDay()] ?? [];
+  const free = useMemo(
+    () => freeSlotsFor(anchor, items, buffers, blocks, dayAv),
+    [anchor, items, buffers, blocks, dayAv],
+  );
+  const stats = statsForDay(items, today);
   const isToday = isSameDay(anchor, today);
-  const isPast = anchor < new Date(today.toDateString());
-
+  const isPast = anchor < startOfDay(today);
   const dateLabel = anchor.toLocaleDateString(undefined, {
     weekday: "long",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 
+  // Active "NOW" booking — only on today, only if time falls inside it.
+  const nowBookingId = isToday
+    ? items.find(
+        (b) =>
+          today >= b.startsAt &&
+          today < new Date(b.startsAt.getTime() + b.durationMin * 60_000),
+      )?.id ?? null
+    : null;
+
   return (
     <div className="flex flex-1 flex-col">
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: `1px solid ${borderCol}` }}
-      >
-        <button
-          type="button"
-          onClick={() => onAnchorChange(addDays(anchor, -1))}
-          aria-label="Previous day"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <div
-          style={{
-            fontFamily: UI,
-            fontSize: 14,
-            fontWeight: 700,
-            color: text,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {isToday ? `Today · ${dateLabel}` : dateLabel}
-        </div>
-        <button
-          type="button"
-          onClick={() => onAnchorChange(addDays(anchor, 1))}
-          aria-label="Next day"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
+      <DateNavRow
+        label={dateLabel}
+        onPrev={() => onAnchorChange(addDays(anchor, -1))}
+        onNext={() => onAnchorChange(addDays(anchor, 1))}
+      />
+      <StatStrip
+        cols={[
+          {
+            value: stats.nextUpAt ? fmtTimeShort(stats.nextUpAt) : "—",
+            label: "Next up",
+            valueAccent: true,
+          },
+          { value: String(stats.count), label: "Bookings" },
+          { value: fmtUsd(stats.earnedUsd), label: "Expected" },
+        ]}
+      />
 
       <div
         className="relative flex-1 overflow-y-auto"
@@ -1053,23 +688,28 @@ function DayView({
         <div
           className="relative"
           style={{
-            height: GRID_HOURS * HOUR_HEIGHT,
+            height: GRID_HOURS * HOUR_HEIGHT_DAY,
             paddingLeft: GUTTER_W,
           }}
         >
-          <HourLines />
-          <div className="absolute inset-0" style={{ left: GUTTER_W }}>
-            <DayColumn
+          <HourLines hourHeight={HOUR_HEIGHT_DAY} />
+          <div className="absolute inset-0" style={{ left: GUTTER_W, right: 8 }}>
+            <DayColumnInner
               day={anchor}
               isToday={isToday}
               isPast={isPast}
-              availability={availability[anchor.getDay()] ?? []}
+              availability={dayAv}
               items={items}
               buffers={buffers}
               blocks={blocks}
+              freeSlots={free}
+              hourHeight={HOUR_HEIGHT_DAY}
+              compact={false}
+              nowBookingId={nowBookingId}
               onOpenBooking={onOpenBooking}
               onTapEmpty={onTapEmpty}
               onTapBuffer={onTapBuffer}
+              showInlineLabels
             />
           </div>
         </div>
@@ -1079,28 +719,718 @@ function DayView({
 }
 
 /* =====================================================================
-   MONTH VIEW
+   WEEK VIEW (hero — same language scaled across 7 cols)
+===================================================================== */
+
+function WeekView({
+  anchor,
+  onAnchorChange,
+  availability,
+  blockedPreset,
+  density,
+  onOpenBooking,
+  onTapEmpty,
+  onTapBuffer,
+  onTapDay,
+}: {
+  anchor: Date;
+  onAnchorChange: (d: Date) => void;
+  availability: AvailabilityWeek;
+  blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
+  density: ReturnType<typeof useDevState>["state"]["weekDensity"];
+  onOpenBooking: (id: string) => void;
+  onTapEmpty: (start: Date) => void;
+  onTapBuffer: (b: TravelBuffer) => void;
+  onTapDay: (d: Date) => void;
+}) {
+  const wkStart = startOfWeek(anchor);
+  const days = weekDays(wkStart);
+  const today = new Date();
+  const items = useMemo(() => bookingsForWeek(wkStart, density), [wkStart, density]);
+  const buffers = useMemo(() => travelBuffersFor(items), [items]);
+  const blocks = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
+  const stats = statsForRange(items, wkStart, addDays(wkStart, 7), availability);
+
+  const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <DateNavRow
+        label={rangeLabel}
+        onPrev={() => onAnchorChange(addDays(anchor, -7))}
+        onNext={() => onAnchorChange(addDays(anchor, 7))}
+      />
+      <StatStrip
+        cols={[
+          { value: String(stats.count), label: "Bookings" },
+          { value: fmtUsd(stats.earnedUsd), label: "Earned" },
+          { value: `${stats.bookedPct}%`, label: "Booked", valueAccent: true },
+        ]}
+      />
+
+      <div
+        className="relative flex-1 overflow-y-auto"
+        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+      >
+        {/* Sticky day headers */}
+        <div
+          className="sticky top-0 z-20 grid"
+          style={{
+            gridTemplateColumns: `${GUTTER_W}px repeat(7, minmax(0, 1fr))`,
+            backgroundColor: NAVY_PANEL,
+            borderBottom: "1px solid rgba(240,235,216,0.10)",
+          }}
+        >
+          <div />
+          {days.map((d, i) => {
+            const isToday = isSameDay(d, today);
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onTapDay(d)}
+                className="flex flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
+                style={{ border: "none", background: "transparent" }}
+              >
+                <span
+                  style={{
+                    fontFamily: UI,
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: CREAM,
+                    opacity: 0.5,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {dayInitial(i)}
+                </span>
+                <span
+                  className="mt-1 flex items-center justify-center rounded-full"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    fontFamily: UI,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: isToday ? MIDNIGHT : CREAM,
+                    backgroundColor: isToday ? ORANGE : "transparent",
+                    border: isToday ? "none" : "1px solid transparent",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {d.getDate()}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          className="relative"
+          style={{
+            height: GRID_HOURS * HOUR_HEIGHT_WEEK,
+            paddingLeft: GUTTER_W,
+          }}
+        >
+          <HourLines hourHeight={HOUR_HEIGHT_WEEK} />
+          <div
+            className="absolute inset-0"
+            style={{
+              left: GUTTER_W,
+              display: "grid",
+              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+            }}
+          >
+            {days.map((d, i) => (
+              <DayColumnInner
+                key={i}
+                day={d}
+                isToday={isSameDay(d, today)}
+                isPast={d < startOfDay(today)}
+                availability={availability[d.getDay()] ?? []}
+                items={items.filter((b) => isSameDay(b.startsAt, d))}
+                buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+                blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+                freeSlots={[]}
+                hourHeight={HOUR_HEIGHT_WEEK}
+                compact
+                nowBookingId={null}
+                onOpenBooking={onOpenBooking}
+                onTapEmpty={onTapEmpty}
+                onTapBuffer={onTapBuffer}
+                showInlineLabels={false}
+              />
+            ))}
+          </div>
+          {/* Global NOW line — only when today is in the visible week. */}
+          {days.some((d) => isSameDay(d, today)) ? (
+            <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlobalNowLine({ hourHeight }: { hourHeight: number }) {
+  const top = pxFor(minutesIntoGrid(new Date()), hourHeight);
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute z-10"
+      style={{ left: GUTTER_W, right: 0, top }}
+    >
+      <div
+        style={{
+          height: 1.5,
+          backgroundColor: ORANGE,
+          boxShadow: "0 0 8px rgba(255,130,63,0.5)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: -4,
+          top: -3,
+          width: 8,
+          height: 8,
+          borderRadius: 9999,
+          backgroundColor: ORANGE,
+        }}
+      />
+    </div>
+  );
+}
+
+/* =====================================================================
+   DAY COLUMN INNER (shared between Day & Week)
+===================================================================== */
+
+function DayColumnInner({
+  day,
+  isToday,
+  isPast,
+  availability,
+  items,
+  buffers,
+  blocks,
+  freeSlots,
+  hourHeight,
+  compact,
+  nowBookingId,
+  onOpenBooking,
+  onTapEmpty,
+  onTapBuffer,
+  showInlineLabels,
+}: {
+  day: Date;
+  isToday: boolean;
+  isPast: boolean;
+  availability: AvailabilityRange[];
+  items: CalendarBooking[];
+  buffers: TravelBuffer[];
+  blocks: BlockedSlot[];
+  freeSlots: FreeSlot[];
+  hourHeight: number;
+  compact: boolean;
+  nowBookingId: string | null;
+  onOpenBooking: (id: string) => void;
+  onTapEmpty: (start: Date) => void;
+  onTapBuffer: (b: TravelBuffer) => void;
+  showInlineLabels: boolean;
+}) {
+  return (
+    <div
+      className="relative"
+      style={{
+        borderLeft: compact ? "1px solid rgba(240,235,216,0.06)" : "none",
+      }}
+    >
+      {/* Outside-hours base tint (cooler) */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+      />
+      {/* Inside-hours warmer band */}
+      {availability.map((r, i) => {
+        const top = pxFor(r.startMin - GRID_START_HOUR * 60, hourHeight);
+        const h = pxFor(r.endMin - r.startMin, hourHeight);
+        return (
+          <div
+            key={i}
+            aria-hidden
+            className="absolute left-0 right-0"
+            style={{
+              top,
+              height: h,
+              backgroundColor: "rgba(255,130,63,0.035)",
+            }}
+          />
+        );
+      })}
+
+      {/* Tap-to-block under everything */}
+      <button
+        type="button"
+        aria-label="Block time"
+        onClick={(e) => {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const y = e.clientY - rect.top;
+          const minutesFromTop =
+            Math.round(((y / hourHeight) * 60) / 15) * 15;
+          const start = new Date(day);
+          start.setHours(GRID_START_HOUR, 0, 0, 0);
+          start.setMinutes(start.getMinutes() + minutesFromTop);
+          onTapEmpty(start);
+        }}
+        className="absolute inset-0 cursor-pointer"
+        style={{ background: "transparent", border: "none" }}
+      />
+
+      {/* Free / Lunch dashed pills (Day view only) */}
+      {freeSlots.map((f) => (
+        <FreePill key={f.id} slot={f} hourHeight={hourHeight} />
+      ))}
+
+      {/* Now line — Day view: under booking ring */}
+      {isToday && !nowBookingId ? (
+        <NowLineLocal hourHeight={hourHeight} />
+      ) : null}
+
+      {/* Blocks */}
+      {blocks.map((b) => (
+        <BlockBlock key={b.id} block={b} compact={compact} hourHeight={hourHeight} />
+      ))}
+
+      {/* Travel buffers */}
+      {buffers.map((b) => (
+        <BufferBlock
+          key={b.id}
+          buffer={b}
+          onTap={() => onTapBuffer(b)}
+          compact={compact}
+          hourHeight={hourHeight}
+          showInlineLabel={showInlineLabels}
+        />
+      ))}
+
+      {/* Bookings */}
+      {items.map((it) => (
+        <BookingBlock
+          key={it.id}
+          item={it}
+          desaturate={isPast}
+          isNow={it.id === nowBookingId}
+          onTap={() => onOpenBooking(it.id)}
+          compact={compact}
+          hourHeight={hourHeight}
+        />
+      ))}
+    </div>
+  );
+}
+
+function NowLineLocal({ hourHeight }: { hourHeight: number }) {
+  const top = pxFor(minutesIntoGrid(new Date()), hourHeight);
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute left-0 right-0 z-[3]"
+      style={{ top }}
+    >
+      <div
+        style={{
+          height: 1.5,
+          backgroundColor: ORANGE,
+          boxShadow: "0 0 8px rgba(255,130,63,0.5)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: -3,
+          top: -3,
+          width: 7,
+          height: 7,
+          borderRadius: 9999,
+          backgroundColor: ORANGE,
+        }}
+      />
+    </div>
+  );
+}
+
+function BookingBlock({
+  item,
+  desaturate,
+  isNow,
+  onTap,
+  compact,
+  hourHeight,
+}: {
+  item: CalendarBooking;
+  desaturate: boolean;
+  isNow: boolean;
+  onTap: () => void;
+  compact: boolean;
+  hourHeight: number;
+}) {
+  const top = pxFor(minutesIntoGrid(item.startsAt), hourHeight);
+  const h = Math.max(28, pxFor(item.durationMin, hourHeight));
+  const tiny = h < 44;
+  const initials = (item.clientFirst[0] ?? "").toUpperCase();
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap();
+      }}
+      className="absolute z-[2] overflow-hidden text-left transition-opacity active:opacity-80"
+      style={{
+        top,
+        height: h,
+        left: 2,
+        right: 2,
+        borderRadius: 10,
+        backgroundColor: desaturate ? "rgba(240,235,216,0.55)" : CREAM,
+        color: MIDNIGHT,
+        padding: compact ? "5px 6px" : "8px 10px",
+        boxShadow: isNow
+          ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
+          : "0 1px 0 rgba(0,0,0,0.15)",
+        border: isNow ? "none" : "1px solid rgba(6,28,39,0.10)",
+        opacity: desaturate ? 0.7 : 1,
+      }}
+    >
+      {/* On-demand zap glyph */}
+      {item.isOnDemand && !compact ? (
+        <Zap
+          size={10}
+          strokeWidth={2.5}
+          className="absolute"
+          style={{ top: 6, right: 6, color: ORANGE }}
+        />
+      ) : null}
+      {item.isOnDemand && compact ? (
+        <Zap
+          size={8}
+          strokeWidth={2.5}
+          className="absolute"
+          style={{ top: 3, right: 3, color: ORANGE }}
+        />
+      ) : null}
+
+      {/* NOW pill (Day view, large blocks) */}
+      {isNow && !compact && h >= 44 ? (
+        <div
+          className="absolute"
+          style={{
+            top: 6,
+            right: 6,
+            backgroundColor: MIDNIGHT,
+            color: ORANGE,
+            fontFamily: UI,
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            padding: "3px 6px",
+            borderRadius: 4,
+          }}
+        >
+          NOW
+        </div>
+      ) : null}
+
+      {!compact ? (
+        <div className="flex items-start gap-2">
+          {/* Avatar mono */}
+          {h >= 44 ? (
+            <div
+              className="flex shrink-0 items-center justify-center rounded-full"
+              style={{
+                width: 28,
+                height: 28,
+                backgroundColor: "rgba(255,130,63,0.22)",
+                color: MIDNIGHT,
+                fontFamily: UI,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                marginTop: 1,
+              }}
+            >
+              {initials}
+              {item.clientFirst[1]?.toUpperCase() ?? ""}
+            </div>
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <div
+              className="truncate"
+              style={{
+                fontFamily: UI,
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                lineHeight: 1.2,
+                paddingRight: isNow ? 42 : 14,
+              }}
+            >
+              {item.clientFirst} · {fmtTimeShort(item.startsAt)}
+            </div>
+            {!tiny ? (
+              <div
+                className="truncate"
+                style={{
+                  fontFamily: UI,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  opacity: 0.7,
+                  marginTop: 2,
+                  lineHeight: 1.2,
+                }}
+              >
+                {item.service} · {item.neighborhood.split(",")[0]}
+              </div>
+            ) : null}
+          </div>
+          {/* Duration pill on right */}
+          {h >= 44 && !isNow ? (
+            <div
+              className="shrink-0 rounded-md"
+              style={{
+                fontFamily: UI,
+                fontSize: 10,
+                fontWeight: 600,
+                color: MIDNIGHT,
+                opacity: 0.6,
+                backgroundColor: "rgba(6,28,39,0.08)",
+                padding: "3px 6px",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {durationPill(item.durationMin)}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        // Compact (Week)
+        <>
+          <div
+            className="truncate"
+            style={{
+              fontFamily: UI,
+              fontSize: 10.5,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.15,
+              paddingRight: item.isOnDemand ? 10 : 0,
+            }}
+          >
+            {item.clientFirst}
+          </div>
+          {h >= 30 ? (
+            <div
+              className="truncate"
+              style={{
+                fontFamily: UI,
+                fontSize: 9.5,
+                fontWeight: 500,
+                opacity: 0.7,
+                lineHeight: 1.15,
+                marginTop: 1,
+              }}
+            >
+              {item.service}
+            </div>
+          ) : null}
+          {h >= 50 ? (
+            <div
+              className="truncate"
+              style={{
+                fontFamily: UI,
+                fontSize: 9,
+                opacity: 0.55,
+                marginTop: 2,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {fmtTimeShort(item.startsAt)}
+            </div>
+          ) : null}
+        </>
+      )}
+    </button>
+  );
+}
+
+function durationPill(min: number): string {
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}`;
+}
+
+function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
+  const top = pxFor(minutesIntoGrid(slot.startsAt), hourHeight);
+  const h = Math.max(
+    28,
+    pxFor((slot.endsAt.getTime() - slot.startsAt.getTime()) / 60_000, hourHeight),
+  );
+  return (
+    <div
+      aria-hidden
+      className="absolute z-[1] flex items-center justify-center"
+      style={{
+        top,
+        height: h,
+        left: 2,
+        right: 2,
+        borderRadius: 10,
+        border: "1.5px dashed rgba(240,235,216,0.18)",
+        backgroundColor: "transparent",
+        color: CREAM,
+        opacity: 0.55,
+        fontFamily: UI,
+        fontSize: 12,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
+        pointerEvents: "none",
+      }}
+    >
+      {slot.label}
+    </div>
+  );
+}
+
+function BufferBlock({
+  buffer,
+  onTap,
+  compact,
+  hourHeight,
+  showInlineLabel,
+}: {
+  buffer: TravelBuffer;
+  onTap: () => void;
+  compact: boolean;
+  hourHeight: number;
+  showInlineLabel: boolean;
+}) {
+  const top = pxFor(minutesIntoGrid(buffer.startsAt), hourHeight);
+  const h = Math.max(compact ? 8 : 14, pxFor(buffer.minutes, hourHeight));
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap();
+      }}
+      className="absolute z-[1] flex items-center justify-center overflow-hidden truncate text-left transition-opacity active:opacity-70"
+      style={{
+        top,
+        height: h,
+        left: 2,
+        right: 2,
+        borderRadius: 4,
+        backgroundColor: "rgba(240,235,216,0.05)",
+        border: "1px solid rgba(240,235,216,0.10)",
+        color: CREAM,
+        padding: compact ? "0 4px" : "2px 6px",
+        fontFamily: UI,
+        fontSize: compact ? 8.5 : 10,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
+        opacity: 0.7,
+      }}
+    >
+      {showInlineLabel ? (
+        <span className="truncate">
+          Travel · {buffer.minutes} min · {buffer.miles} mi
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function BlockBlock({
+  block,
+  compact,
+  hourHeight,
+}: {
+  block: BlockedSlot;
+  compact: boolean;
+  hourHeight: number;
+}) {
+  const top = pxFor(minutesIntoGrid(block.startsAt), hourHeight);
+  const h = Math.max(
+    18,
+    pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000, hourHeight),
+  );
+  return (
+    <div
+      className="absolute z-[2] overflow-hidden"
+      style={{
+        top,
+        height: h,
+        left: 2,
+        right: 2,
+        borderRadius: 8,
+        backgroundColor: "rgba(6,28,39,0.55)",
+        border: "1px solid rgba(240,235,216,0.18)",
+        backgroundImage:
+          "repeating-linear-gradient(135deg, rgba(240,235,216,0.10) 0 4px, transparent 4px 8px)",
+        padding: compact ? "3px 4px" : "6px 8px",
+        color: CREAM,
+      }}
+    >
+      {block.reason && h >= 24 ? (
+        <span
+          className="truncate"
+          style={{
+            display: "block",
+            fontFamily: UI,
+            fontSize: compact ? 9.5 : 11,
+            fontWeight: 600,
+            opacity: 0.8,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {block.reason}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/* =====================================================================
+   MONTH VIEW (per screenshot 2 — heat-aware)
 ===================================================================== */
 
 function MonthView({
   anchor,
   onAnchorChange,
   density,
+  availability,
   onTapDay,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
+  availability: AvailabilityWeek;
   onTapDay: (d: Date) => void;
 }) {
-  const { text, borderCol } = useHomeTheme();
+  const { text } = useHomeTheme();
   const today = new Date();
   const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
   const gridStart = startOfWeek(monthStart);
-  // 6 rows × 7 cols
   const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
 
-  // Aggregate booking counts across the visible weeks.
+  // Aggregate booking counts per day across the visible weeks.
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     const weekStarts = new Set<number>();
@@ -1108,12 +1438,24 @@ function MonthView({
     weekStarts.forEach((ts) => {
       const items = bookingsForWeek(new Date(ts), density);
       items.forEach((b) => {
-        const key = new Date(b.startsAt.toDateString()).getTime().toString();
+        const key = startOfDay(b.startsAt).getTime().toString();
         map.set(key, (map.get(key) ?? 0) + 1);
       });
     });
     return map;
   }, [cells, density]);
+
+  // Stats for the month proper (not the visible 6 weeks).
+  const monthStats = useMemo(() => {
+    let allItems: CalendarBooking[] = [];
+    let cursor = startOfWeek(monthStart);
+    while (cursor < monthEnd) {
+      const items = bookingsForWeek(cursor, density);
+      allItems = allItems.concat(items);
+      cursor = addDays(cursor, 7);
+    }
+    return statsForRange(allItems, monthStart, monthEnd, availability);
+  }, [monthStart, monthEnd, density, availability]);
 
   const monthLabel = anchor.toLocaleString(undefined, {
     month: "long",
@@ -1122,46 +1464,17 @@ function MonthView({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: `1px solid ${borderCol}` }}
-      >
-        <button
-          type="button"
-          onClick={() =>
-            onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))
-          }
-          aria-label="Previous month"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <div
-          style={{
-            fontFamily: UI,
-            fontSize: 14,
-            fontWeight: 700,
-            color: text,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {monthLabel}
-        </div>
-        <button
-          type="button"
-          onClick={() =>
-            onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))
-          }
-          aria-label="Next month"
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
-          style={{ width: 28, height: 28, color: text }}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
+      <DateNavRow
+        label={monthLabel}
+        onPrev={() =>
+          onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))
+        }
+        onNext={() =>
+          onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))
+        }
+      />
 
-      <div className="grid grid-cols-7 gap-px px-2 pt-2">
+      <div className="grid grid-cols-7 gap-px px-3 pt-1">
         {["S", "M", "T", "W", "T", "F", "S"].map((l, i) => (
           <div
             key={i}
@@ -1170,9 +1483,9 @@ function MonthView({
               fontSize: 10,
               fontWeight: 600,
               color: text,
-              opacity: 0.5,
+              opacity: 0.45,
               textAlign: "center",
-              padding: "6px 0",
+              padding: "4px 0",
               letterSpacing: "0.06em",
             }}
           >
@@ -1181,68 +1494,119 @@ function MonthView({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1 p-2">
+      <div className="grid grid-cols-7 gap-1.5 px-3 pb-2">
         {cells.map((d, i) => {
           const inMonth = d.getMonth() === anchor.getMonth();
           const isToday = isSameDay(d, today);
-          const key = new Date(d.toDateString()).getTime().toString();
+          const key = startOfDay(d).getTime().toString();
           const count = counts.get(key) ?? 0;
-          const fill = Math.min(1, count / 5);
+          // Heat tier: 0 → none, 1 → light, 2-3 → medium, 4+ → full.
+          const tier = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
+          const tints = [
+            "rgba(240,235,216,0.025)",
+            "rgba(255,130,63,0.10)",
+            "rgba(255,130,63,0.25)",
+            "rgba(255,130,63,1)",
+          ];
+          const numColor = tier === 3 ? MIDNIGHT : text;
+          const countColor = tier === 3 ? MIDNIGHT : ORANGE;
+
           return (
             <button
               key={i}
               type="button"
               onClick={() => onTapDay(d)}
-              className="relative flex flex-col items-center rounded-lg transition-opacity active:opacity-70"
+              className="relative flex flex-col items-center justify-between rounded-lg transition-opacity active:opacity-70"
               style={{
                 aspectRatio: "1",
-                backgroundColor:
-                  count > 0
-                    ? `rgba(255,130,63,${0.06 + fill * 0.18})`
-                    : "rgba(240,235,216,0.025)",
-                border: `1px solid ${
-                  isToday ? "transparent" : "rgba(240,235,216,0.06)"
-                }`,
-                opacity: inMonth ? 1 : 0.35,
-                padding: 4,
+                backgroundColor: tints[tier],
+                border: isToday
+                  ? `1.5px solid ${ORANGE}`
+                  : "1px solid rgba(240,235,216,0.06)",
+                opacity: inMonth ? 1 : 0.3,
+                padding: "6px 4px",
               }}
             >
               <span
-                className="flex items-center justify-center rounded-full"
                 style={{
-                  width: 24,
-                  height: 24,
                   fontFamily: UI,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  color: isToday ? MIDNIGHT : text,
-                  backgroundColor: isToday ? ORANGE : "transparent",
-                  letterSpacing: "-0.005em",
-                  marginTop: 2,
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  color: numColor,
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
                 }}
               >
                 {d.getDate()}
               </span>
               {count > 0 ? (
-                <div className="mt-auto flex gap-0.5 pb-1">
-                  {Array.from({ length: Math.min(count, 4) }).map((_, j) => (
-                    <span
-                      key={j}
-                      style={{
-                        width: 3,
-                        height: 3,
-                        borderRadius: 9999,
-                        backgroundColor: ORANGE,
-                        opacity: isToday ? 0.7 : 0.85,
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : null}
+                <span
+                  style={{
+                    fontFamily: UI,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: countColor,
+                    fontVariantNumeric: "tabular-nums",
+                    lineHeight: 1,
+                    marginBottom: 1,
+                  }}
+                >
+                  {count}
+                </span>
+              ) : (
+                <span style={{ height: 10 }} />
+              )}
             </button>
           );
         })}
       </div>
+
+      {/* Less → More legend */}
+      <div className="flex items-center justify-center gap-2 pb-4 pt-1">
+        <span
+          style={{
+            fontFamily: UI,
+            fontSize: 10.5,
+            color: text,
+            opacity: 0.55,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          Less
+        </span>
+        {["rgba(240,235,216,0.06)", "rgba(255,130,63,0.10)", "rgba(255,130,63,0.30)", "rgba(255,130,63,1)"].map((c, i) => (
+          <span
+            key={i}
+            aria-hidden
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 3,
+              backgroundColor: c,
+              border: "1px solid rgba(240,235,216,0.10)",
+            }}
+          />
+        ))}
+        <span
+          style={{
+            fontFamily: UI,
+            fontSize: 10.5,
+            color: text,
+            opacity: 0.55,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          More
+        </span>
+      </div>
+
+      <StatStrip
+        cols={[
+          { value: String(monthStats.count), label: "Bookings" },
+          { value: fmtUsd(monthStats.earnedUsd), label: "Earned" },
+          { value: `${monthStats.bookedPct}%`, label: "Booked", valueAccent: true },
+        ]}
+      />
     </div>
   );
 }
@@ -1274,7 +1638,7 @@ function SheetShell({
         aria-label={title}
         className="absolute bottom-0 left-0 right-0 flex max-h-[80vh] flex-col overflow-hidden rounded-t-3xl"
         style={{
-          backgroundColor: "#0B2330",
+          backgroundColor: NAVY_PANEL,
           border: "1px solid rgba(240,235,216,0.10)",
           borderBottom: "none",
           color: CREAM,
@@ -1292,7 +1656,7 @@ function SheetShell({
           />
         </div>
         <div className="flex items-center justify-between px-5 pt-3 pb-2">
-          <h2 style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
             {title}
           </h2>
           <button
@@ -1360,6 +1724,157 @@ function SheetButton({
   );
 }
 
+/* ----- Overflow / More sheet (per screenshot 3) ----- */
+
+interface MoreItem {
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  desc: string;
+  onClick?: () => void;
+  soon?: boolean;
+}
+
+function MoreRow({ item }: { item: MoreItem }) {
+  const disabled = item.soon || !item.onClick;
+  return (
+    <button
+      type="button"
+      onClick={item.onClick}
+      disabled={disabled}
+      className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-opacity active:opacity-70"
+      style={{
+        backgroundColor: "rgba(240,235,216,0.04)",
+        border: "1px solid rgba(240,235,216,0.08)",
+        opacity: disabled ? 0.55 : 1,
+        cursor: disabled ? "default" : "pointer",
+      }}
+    >
+      <div
+        className="flex shrink-0 items-center justify-center rounded-xl"
+        style={{
+          width: 44,
+          height: 44,
+          backgroundColor: item.iconBg,
+          color: item.iconColor,
+        }}
+      >
+        {item.icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span
+            style={{
+              fontFamily: UI,
+              fontSize: 15,
+              fontWeight: 700,
+              color: CREAM,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {item.label}
+          </span>
+          {item.soon ? (
+            <span
+              style={{
+                fontFamily: UI,
+                fontSize: 9,
+                fontWeight: 800,
+                color: ORANGE,
+                backgroundColor: "rgba(255,130,63,0.14)",
+                border: "1px solid rgba(255,130,63,0.35)",
+                letterSpacing: "0.1em",
+                padding: "2px 6px",
+                borderRadius: 4,
+                textTransform: "uppercase",
+              }}
+            >
+              Soon
+            </span>
+          ) : null}
+        </div>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: UI,
+            fontSize: 12.5,
+            color: CREAM,
+            opacity: 0.55,
+            marginTop: 2,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {item.desc}
+        </div>
+      </div>
+      {!item.soon ? (
+        <ChevronRight
+          size={18}
+          strokeWidth={1.75}
+          style={{ color: CREAM, opacity: 0.4, flexShrink: 0 }}
+        />
+      ) : null}
+    </button>
+  );
+}
+
+function OverflowSheet({
+  onClose,
+  onAvailability,
+  onBlock,
+}: {
+  onClose: () => void;
+  onAvailability: () => void;
+  onBlock: () => void;
+}) {
+  const items: MoreItem[] = [
+    {
+      icon: <Clock size={20} strokeWidth={1.75} />,
+      iconBg: "rgba(255,130,63,0.14)",
+      iconColor: ORANGE,
+      label: "Availability",
+      desc: "Set hours for each day of the week",
+      onClick: onAvailability,
+    },
+    {
+      icon: <CalendarOff size={20} strokeWidth={1.75} />,
+      iconBg: "rgba(120,200,160,0.14)",
+      iconColor: "#7ECAA0",
+      label: "Block time",
+      desc: "Add an appointment, lunch, or day off",
+      onClick: onBlock,
+    },
+    {
+      icon: <Activity size={20} strokeWidth={1.75} />,
+      iconBg: "rgba(255,130,63,0.14)",
+      iconColor: ORANGE,
+      label: "Sync external calendar",
+      desc: "Connect Google or Apple Calendar",
+      soon: true,
+    },
+    {
+      icon: <SettingsIcon size={20} strokeWidth={1.75} />,
+      iconBg: "rgba(240,235,216,0.10)",
+      iconColor: CREAM,
+      label: "Calendar settings",
+      desc: "Default prep time, booking window, more",
+      soon: true,
+    },
+  ];
+  return (
+    <SheetShell title="More" onClose={onClose}>
+      <div className="flex flex-col gap-2">
+        {items.map((it, i) => (
+          <MoreRow key={i} item={it} />
+        ))}
+      </div>
+    </SheetShell>
+  );
+}
+
+/* ----- Block time sheet ----- */
+
 function BlockTimeSheet({
   start,
   density,
@@ -1375,7 +1890,6 @@ function BlockTimeSheet({
   const [conflictName, setConflictName] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  // Detect conflict against any booking on the same day for the requested span.
   const conflictCheck = (durationMin: number): string | null => {
     const wkStart = startOfWeek(start);
     const items = bookingsForWeek(wkStart, density).filter((b) =>
@@ -1410,12 +1924,16 @@ function BlockTimeSheet({
           fontSize: 12,
           color: CREAM,
           opacity: 0.6,
-          marginBottom: 10,
+          marginBottom: 12,
           letterSpacing: "-0.005em",
         }}
       >
         Starting {fmtTime(start)} ·{" "}
-        {start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+        {start.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })}
       </div>
 
       {phase === "choose" ? (
@@ -1520,7 +2038,9 @@ function BlockTimeSheet({
             Pick a shorter block or a different time.
           </div>
           <div className="mt-3 flex gap-2">
-            <SheetButton onClick={() => setPhase("choose")}>Pick another</SheetButton>
+            <SheetButton onClick={() => setPhase("choose")}>
+              Pick another
+            </SheetButton>
           </div>
         </div>
       ) : null}
@@ -1604,26 +2124,6 @@ function BufferSheet({
           Buffer extended to {total} min for this gap only.
         </div>
       )}
-    </SheetShell>
-  );
-}
-
-function OverflowSheet({
-  onClose,
-  onAvailability,
-  onBlock,
-}: {
-  onClose: () => void;
-  onAvailability: () => void;
-  onBlock: () => void;
-}) {
-  return (
-    <SheetShell title="More" onClose={onClose}>
-      <div className="flex flex-col gap-2">
-        <SheetButton onClick={onAvailability}>Availability</SheetButton>
-        <SheetButton onClick={onBlock}>Block time</SheetButton>
-        <SheetButton onClick={onClose}>Calendar settings (soon)</SheetButton>
-      </div>
     </SheetShell>
   );
 }
