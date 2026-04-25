@@ -539,56 +539,73 @@ function StatStrip({
    GRID PRIMITIVES
 ===================================================================== */
 
-function HourLines({ hourHeight }: { hourHeight: number }) {
+function HourGutter({ hourHeight }: { hourHeight: number }) {
   const { text } = useHomeTheme();
   const hours: number[] = [];
   for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
   return (
-    <div className="absolute inset-0">
+    <div
+      className="relative"
+      style={{
+        width: GUTTER_W,
+        flexShrink: 0,
+        borderRight: "1px solid rgba(240,235,216,0.06)",
+      }}
+    >
+      {hours.map((h) => {
+        const top = (h - GRID_START_HOUR) * hourHeight;
+        return (
+          <span
+            key={h}
+            className="absolute"
+            style={{
+              top: top - 6,
+              right: 6,
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 500,
+              color: text,
+              opacity: 0.5,
+              textAlign: "right",
+              letterSpacing: "0.02em",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmtHourLabel(h)}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const hours: number[] = [];
+  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  return (
+    <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
         const top = (h - GRID_START_HOUR) * hourHeight;
         return (
           <div key={h}>
             <div
-              className="absolute"
+              className="absolute left-0 right-0"
               style={{
                 top,
-                left: 0,
-                right: 0,
                 height: 1,
                 backgroundColor: "rgba(240,235,216,0.08)",
               }}
             />
             {i < hours.length - 1 ? (
               <div
-                className="absolute"
+                className="absolute left-0 right-0"
                 style={{
                   top: top + hourHeight / 2,
-                  left: 0,
-                  right: 0,
                   height: 1,
                   backgroundColor: "rgba(240,235,216,0.035)",
                 }}
               />
             ) : null}
-            <span
-              className="absolute"
-              style={{
-                top: top - 6,
-                left: -GUTTER_W,
-                width: GUTTER_W - 6,
-                fontFamily: UI,
-                fontSize: 10,
-                fontWeight: 500,
-                color: text,
-                opacity: 0.45,
-                textAlign: "right",
-                letterSpacing: "0.02em",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {fmtHourLabel(h)}
-            </span>
           </div>
         );
       })}
