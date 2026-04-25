@@ -78,6 +78,14 @@ const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 ===================================================================== */
 
 export function CalendarPage() {
+  return (
+    <CalendarEditsProvider>
+      <CalendarPageInner />
+    </CalendarEditsProvider>
+  );
+}
+
+function CalendarPageInner() {
   const { state: dev } = useDevState();
   const navigate = useNavigate();
 
