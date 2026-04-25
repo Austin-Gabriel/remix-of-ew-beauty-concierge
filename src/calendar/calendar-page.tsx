@@ -885,8 +885,8 @@ function GlobalNowLine({ hourHeight }: { hourHeight: number }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute z-10"
-      style={{ left: GUTTER_W, right: 0, top }}
+      className="pointer-events-none absolute left-0 right-0 z-10"
+      style={{ top }}
     >
       <div
         style={{
