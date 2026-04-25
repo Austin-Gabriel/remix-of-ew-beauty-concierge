@@ -1170,12 +1170,12 @@ function BookingBlock({
         left: 2,
         right: 2,
         borderRadius: 10,
-        backgroundColor: desaturate ? "rgba(240,235,216,0.55)" : CREAM,
+        backgroundColor: desaturate ? "rgba(255,255,255,0.55)" : "#FFFFFF",
         color: MIDNIGHT,
         padding: compact ? "5px 6px" : "8px 10px",
         boxShadow: isNow
           ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
-          : "0 1px 0 rgba(0,0,0,0.15)",
+          : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
         border: isNow ? "none" : "1px solid rgba(6,28,39,0.10)",
         opacity: desaturate ? 0.7 : 1,
       }}
@@ -1198,21 +1198,23 @@ function BookingBlock({
         />
       ) : null}
 
-      {/* NOW pill (Day view, large blocks) */}
-      {isNow && !compact && h >= 44 ? (
+      {/* NOW pill — notched over the top-right corner. Day view (large) and Week (compact). */}
+      {isNow ? (
         <div
           className="absolute"
           style={{
-            top: 6,
-            right: 6,
-            backgroundColor: MIDNIGHT,
-            color: ORANGE,
+            top: compact ? -6 : -7,
+            right: compact ? -4 : -6,
+            backgroundColor: ORANGE,
+            color: MIDNIGHT,
             fontFamily: UI,
-            fontSize: 9,
+            fontSize: compact ? 8 : 9,
             fontWeight: 800,
             letterSpacing: "0.08em",
-            padding: "3px 6px",
+            padding: compact ? "2px 5px" : "3px 7px",
             borderRadius: 4,
+            zIndex: 3,
+            boxShadow: "0 1px 2px rgba(6,28,39,0.25)",
           }}
         >
           NOW
