@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Zap,
   Clock,
   CalendarOff,
   Activity,
   Settings as SettingsIcon,
+  Check,
 } from "lucide-react";
 import { HomeShell, useHomeTheme, HOME_SANS } from "@/home/home-shell";
 import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
@@ -46,9 +48,12 @@ import {
 
 /**
  * Calendar — the working surface that shows the SHAPE of a pro's time.
- *   Day · Week (hero) · Month
+ *   Week (default, hero) · Month
  * Reads bookings from /src/data/mock-bookings.ts. Tapping any booking routes
  * to /bookings/$id. Plugs into the existing dev-state toggle.
+ *
+ * Day view is no longer a top-level option. Tapping a day in Month jumps
+ * to Week with that day highlighted as the hero column.
  */
 
 const UI = `Inter, ${HOME_SANS}`;
@@ -57,7 +62,7 @@ const CREAM = "#F0EBD8";
 const MIDNIGHT = "#061C27";
 const NAVY_PANEL = "#0B2330";
 
-type View = "day" | "week" | "month";
+type View = "week" | "month";
 
 /* Grid geometry */
 const HOUR_HEIGHT_DAY = 64;
@@ -75,10 +80,15 @@ export function CalendarPage() {
   const { state: dev } = useDevState();
   const navigate = useNavigate();
 
-  const initialView: View =
-    dev.calendarView === "auto" ? "week" : dev.calendarView;
-  const [view, setView] = useState<View>(initialView);
+  // Calendar always lands on Week. Per spec: "every time the pro enters the
+  // Calendar tab, they land on Week, regardless of what view they were on
+  // previously." No persistence.
+  const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  // The "hero" day inside Week view. Defaults to today; tapping a Week day
+  // header changes it without navigating away. Tapping a Month cell sets
+  // this AND switches to Week.
+  const [heroDay, setHeroDay] = useState<Date>(() => new Date());
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Sheets
@@ -87,7 +97,6 @@ export function CalendarPage() {
   const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
 
   const av = useMemo(() => availabilityFor(dev.availability), [dev.availability]);
-  const today = new Date();
 
   // Subtitle string per view.
   const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
@@ -97,8 +106,6 @@ export function CalendarPage() {
       <ActiveBookingStrip />
       <Header
         subtitle={subtitle}
-        view={view}
-        onViewChange={setView}
         onOverflow={() => setOverflowOpen(true)}
       />
 
@@ -106,31 +113,24 @@ export function CalendarPage() {
         {view === "week" ? (
           <WeekView
             anchor={anchor}
-            onAnchorChange={setAnchor}
-            availability={av}
-            blockedPreset={dev.blockedTime}
-            density={dev.weekDensity}
-            onOpenBooking={(id) => {
-              if (isRealBookingId(id)) {
-                navigate({ to: "/bookings/$id", params: { id } });
-              }
-            }}
-            onTapEmpty={(start) => setBlockSheet({ start })}
-            onTapBuffer={(b) => setBufferSheet(b)}
-            onTapDay={(d) => {
+            onAnchorChange={(d) => {
               setAnchor(d);
-              setView("day");
+              // Keep the hero inside the visible week. If the user paged to
+              // a new week, default the hero to that week's "today" (or the
+              // first day if today isn't in range).
+              const wkStart = startOfWeek(d);
+              const today = new Date();
+              const todayInWeek =
+                today >= wkStart && today < addDays(wkStart, 7);
+              setHeroDay(todayInWeek ? today : wkStart);
             }}
-          />
-        ) : null}
-
-        {view === "day" ? (
-          <DayView
-            anchor={anchor}
-            onAnchorChange={setAnchor}
             availability={av}
             blockedPreset={dev.blockedTime}
             density={dev.weekDensity}
+            view={view}
+            onViewChange={setView}
+            heroDay={heroDay}
+            onHeroDayChange={setHeroDay}
             onOpenBooking={(id) => {
               if (isRealBookingId(id)) {
                 navigate({ to: "/bookings/$id", params: { id } });
@@ -147,9 +147,13 @@ export function CalendarPage() {
             onAnchorChange={setAnchor}
             density={dev.weekDensity}
             availability={av}
+            view={view}
+            onViewChange={setView}
             onTapDay={(d) => {
+              // Tapping a Month day: set as hero, jump to Week.
               setAnchor(d);
-              setView("day");
+              setHeroDay(d);
+              setView("week");
             }}
           />
         ) : null}
@@ -213,26 +217,12 @@ function useViewSubtitle(
   availability: AvailabilityWeek,
 ): string {
   return useMemo(() => {
-    if (view === "day") {
-      const wkStart = startOfWeek(anchor);
-      const items = bookingsForWeek(wkStart, density).filter((b) =>
-        isSameDay(b.startsAt, anchor),
-      );
-      const earned = items.reduce((s, b) => s + b.priceUsd, 0);
-      const label = isSameDay(anchor, new Date())
-        ? "Today"
-        : anchor.toLocaleDateString(undefined, { weekday: "long" });
-      const n = items.length;
-      return `${label} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
-    }
     if (view === "week") {
       const wkStart = startOfWeek(anchor);
-      const wkEnd = addDays(wkStart, 7);
       const items = bookingsForWeek(wkStart, density);
       const earned = items.reduce((s, b) => s + b.priceUsd, 0);
       const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
       const n = items.length;
-      void wkEnd;
       return `${rangeLabel} · ${n} booking${n === 1 ? "" : "s"} · ${fmtUsd(earned)}`;
     }
     // month
@@ -271,13 +261,9 @@ function formatWeekRange(start: Date, end: Date): string {
 
 function Header({
   subtitle,
-  view,
-  onViewChange,
   onOverflow,
 }: {
   subtitle: string;
-  view: View;
-  onViewChange: (v: View) => void;
   onOverflow: () => void;
 }) {
   const { text, borderCol, bg } = useHomeTheme();
@@ -363,56 +349,124 @@ function Header({
           <span style={{ opacity: 0.6 }}> · {subtitle.split(" · ").slice(1).join(" · ")}</span>
         </div>
       </div>
-
-      <ViewSwitcher view={view} onChange={onViewChange} />
     </div>
   );
 }
 
-function ViewSwitcher({
+/**
+ * View dropdown — replaces the segmented Day/Week/Month pill.
+ * The active date-range label gets a small chevron next to it; tapping the
+ * label or chevron drops a menu with Week / Month. No big control eating
+ * header space.
+ */
+function ViewDropdown({
   view,
   onChange,
+  label,
 }: {
   view: View;
   onChange: (v: View) => void;
+  label: string;
 }) {
   const { text, borderCol } = useHomeTheme();
-  const opts: View[] = ["day", "week", "month"];
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close on outside tap.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [open]);
+
+  const opts: { value: View; label: string }[] = [
+    { value: "week", label: "Week" },
+    { value: "month", label: "Month" },
+  ];
+
   return (
-    <div
-      className="mb-3 flex w-full rounded-full p-1"
-      style={{
-        backgroundColor: "rgba(240,235,216,0.04)",
-        border: `1px solid ${borderCol}`,
-      }}
-      role="tablist"
-    >
-      {opts.map((o) => {
-        const active = o === view;
-        return (
-          <button
-            key={o}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o)}
-            className="flex-1 rounded-full py-2 text-center transition-colors"
-            style={{
-              fontFamily: UI,
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "-0.005em",
-              backgroundColor: active ? ORANGE : "transparent",
-              color: active ? MIDNIGHT : text,
-              opacity: active ? 1 : 0.7,
-              textTransform: "capitalize",
-              border: "none",
-            }}
-          >
-            {o}
-          </button>
-        );
-      })}
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-opacity active:opacity-70"
+        style={{
+          fontFamily: UI,
+          fontSize: 16,
+          fontWeight: 700,
+          color: text,
+          letterSpacing: "-0.01em",
+          backgroundColor: "transparent",
+          border: "none",
+        }}
+      >
+        <span>{label}</span>
+        <ChevronDown
+          size={14}
+          strokeWidth={2}
+          style={{
+            opacity: 0.6,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
+          }}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute left-1/2 z-30 mt-1 -translate-x-1/2 rounded-xl py-1"
+          style={{
+            top: "100%",
+            minWidth: 132,
+            backgroundColor: NAVY_PANEL,
+            border: `1px solid ${borderCol}`,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+          }}
+        >
+          {opts.map((o) => {
+            const active = o.value === view;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors"
+                style={{
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: text,
+                  backgroundColor: "transparent",
+                  border: "none",
+                }}
+              >
+                <span>{o.label}</span>
+                {active ? (
+                  <Check size={14} strokeWidth={2.25} style={{ color: ORANGE }} />
+                ) : (
+                  <span style={{ width: 14 }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -425,10 +479,19 @@ function DateNavRow({
   label,
   onPrev,
   onNext,
+  view,
+  onViewChange,
 }: {
   label: string;
   onPrev: () => void;
   onNext: () => void;
+  /**
+   * When provided, the centre date label becomes a chevron-dropdown that
+   * lets the pro switch between Week and Month. Per spec this replaces the
+   * old segmented control.
+   */
+  view?: View;
+  onViewChange?: (v: View) => void;
 }) {
   const { text, borderCol } = useHomeTheme();
   return (
@@ -448,17 +511,21 @@ function DateNavRow({
       >
         <ChevronLeft size={16} />
       </button>
-      <div
-        style={{
-          fontFamily: UI,
-          fontSize: 16,
-          fontWeight: 700,
-          color: text,
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {label}
-      </div>
+      {view && onViewChange ? (
+        <ViewDropdown view={view} onChange={onViewChange} label={label} />
+      ) : (
+        <div
+          style={{
+            fontFamily: UI,
+            fontSize: 16,
+            fontWeight: 700,
+            color: text,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {label}
+        </div>
+      )}
       <button
         type="button"
         onClick={onNext}
@@ -743,20 +810,26 @@ function WeekView({
   availability,
   blockedPreset,
   density,
+  view,
+  onViewChange,
+  heroDay,
+  onHeroDayChange,
   onOpenBooking,
   onTapEmpty,
   onTapBuffer,
-  onTapDay,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
   availability: AvailabilityWeek;
   blockedPreset: ReturnType<typeof useDevState>["state"]["blockedTime"];
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
+  view: View;
+  onViewChange: (v: View) => void;
+  heroDay: Date;
+  onHeroDayChange: (d: Date) => void;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
   onTapBuffer: (b: TravelBuffer) => void;
-  onTapDay: (d: Date) => void;
 }) {
   const wkStart = startOfWeek(anchor);
   const days = weekDays(wkStart);
@@ -774,6 +847,8 @@ function WeekView({
         label={rangeLabel}
         onPrev={() => onAnchorChange(addDays(anchor, -7))}
         onNext={() => onAnchorChange(addDays(anchor, 7))}
+        view={view}
+        onViewChange={onViewChange}
       />
       <StatStrip
         cols={[
@@ -790,10 +865,11 @@ function WeekView({
         buffers={buffers}
         blocks={blocks}
         availability={availability}
+        heroDay={heroDay}
         onOpenBooking={onOpenBooking}
         onTapEmpty={onTapEmpty}
         onTapBuffer={onTapBuffer}
-        onTapDay={onTapDay}
+        onTapDay={onHeroDayChange}
       />
     </div>
   );
@@ -808,6 +884,7 @@ function WeekGrid({
   buffers,
   blocks,
   availability,
+  heroDay,
   onOpenBooking,
   onTapEmpty,
   onTapBuffer,
@@ -819,11 +896,16 @@ function WeekGrid({
   buffers: TravelBuffer[];
   blocks: BlockedSlot[];
   availability: AvailabilityWeek;
+  /** Highlighted day inside the week. Phase 1: prop wired only; Phase 2 will
+   *  drive density/content per spec ("hero through information density, not
+   *  column width"). */
+  heroDay: Date;
   onOpenBooking: (id: string) => void;
   onTapEmpty: (start: Date) => void;
   onTapBuffer: (b: TravelBuffer) => void;
   onTapDay: (d: Date) => void;
 }) {
+  void heroDay; // Phase 2 will consume.
   // Active "NOW" booking — only on today, only if time falls inside it.
   const nowBookingId =
     items.find(
@@ -1489,12 +1571,16 @@ function MonthView({
   onAnchorChange,
   density,
   availability,
+  view,
+  onViewChange,
   onTapDay,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
   availability: AvailabilityWeek;
+  view: View;
+  onViewChange: (v: View) => void;
   onTapDay: (d: Date) => void;
 }) {
   const { text } = useHomeTheme();
@@ -1546,6 +1632,8 @@ function MonthView({
         onNext={() =>
           onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))
         }
+        view={view}
+        onViewChange={onViewChange}
       />
 
       <div className="grid grid-cols-7 gap-px px-3 pt-1">

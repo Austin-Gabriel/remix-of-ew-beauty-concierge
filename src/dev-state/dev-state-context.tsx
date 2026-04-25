@@ -48,10 +48,11 @@ export type DevBookingSource = "auto" | "on-demand" | "scheduled";
 
 /* ---- Calendar-only dev fields ---- */
 
-/** Which calendar view to land on. "auto" = the Calendar's own default (Week). */
-export type DevCalendarView = "auto" | "day" | "week" | "month";
-
-/** Density of bookings to render across the visible week. */
+/**
+ * Density of bookings to render across the visible calendar range.
+ * Drives BOTH Week view block density and Month view heat tints — single
+ * source of truth so the two views can never disagree.
+ */
 export type DevWeekDensity = "auto" | "empty" | "light" | "typical" | "packed";
 
 /** How much blocked time to seed across the week. */
@@ -73,7 +74,6 @@ export interface DevState {
   dayContext: DevDayContext;
   lifecycle: DevLifecycle;
   bookingSource: DevBookingSource;
-  calendarView: DevCalendarView;
   weekDensity: DevWeekDensity;
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
@@ -87,7 +87,6 @@ const DEFAULT_STATE: DevState = {
   dayContext: "auto",
   lifecycle: "none",
   bookingSource: "auto",
-  calendarView: "auto",
   weekDensity: "auto",
   blockedTime: "auto",
   availability: "auto",
@@ -105,7 +104,6 @@ interface Ctx {
   setDayContext: (v: DevDayContext) => void;
   setLifecycle: (v: DevLifecycle) => void;
   setBookingSource: (v: DevBookingSource) => void;
-  setCalendarView: (v: DevCalendarView) => void;
   setWeekDensity: (v: DevWeekDensity) => void;
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
@@ -165,7 +163,6 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
   const setDayContext = useCallback((v: DevDayContext) => setState((s) => ({ ...s, dayContext: v })), []);
   const setLifecycle = useCallback((v: DevLifecycle) => setState((s) => ({ ...s, lifecycle: v })), []);
   const setBookingSource = useCallback((v: DevBookingSource) => setState((s) => ({ ...s, bookingSource: v })), []);
-  const setCalendarView = useCallback((v: DevCalendarView) => setState((s) => ({ ...s, calendarView: v })), []);
   const setWeekDensity = useCallback((v: DevWeekDensity) => setState((s) => ({ ...s, weekDensity: v })), []);
   const setBlockedTime = useCallback((v: DevBlockedTime) => setState((s) => ({ ...s, blockedTime: v })), []);
   const setAvailability = useCallback((v: DevAvailability) => setState((s) => ({ ...s, availability: v })), []);
@@ -175,10 +172,10 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setCalendarView, setWeekDensity, setBlockedTime, setAvailability,
+      setWeekDensity, setBlockedTime, setAvailability,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setCalendarView, setWeekDensity, setBlockedTime, setAvailability, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -197,7 +194,6 @@ export function useDevState(): Ctx {
       setDayContext: () => {},
       setLifecycle: () => {},
       setBookingSource: () => {},
-      setCalendarView: () => {},
       setWeekDensity: () => {},
       setBlockedTime: () => {},
       setAvailability: () => {},
