@@ -19,6 +19,10 @@ import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
 import { ActiveBookingStrip } from "@/components/active-booking-strip";
 import { useDevState } from "@/dev-state/dev-state-context";
 import {
+  CalendarEditsProvider,
+  useCalendarEdits,
+} from "@/calendar/calendar-edits-context";
+import {
   addDays,
   densityPaddingForWeek,
   realBookingsForWeek,
