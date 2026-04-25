@@ -183,6 +183,8 @@ function CalendarPageInner() {
         ) : null}
       </div>
 
+      <UndoRedoPill />
+
       <BottomTabs
         active="calendar"
         onSelect={(k: TabKey) => {
