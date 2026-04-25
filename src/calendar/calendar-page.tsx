@@ -2178,7 +2178,7 @@ function BlockTimeSheet({
   const initialDuration =
     mode.mode === "edit" && editing
       ? Math.round((editing.endsAt.getTime() - editing.startsAt.getTime()) / 60_000)
-      : mode.presetMinutes ?? 60;
+      : (mode.mode === "create" ? mode.presetMinutes : undefined) ?? 60;
 
   const [start, setStart] = useState<Date>(initialStart);
   const [durationMin, setDurationMin] = useState<number>(initialDuration);
