@@ -1717,8 +1717,9 @@ function MonthView({
           const isToday = isSameDay(d, today);
           const key = startOfDay(d).getTime().toString();
           const count = counts.get(key) ?? 0;
-          // Heat tier: 0 → none, 1 → light, 2-3 → medium, 4+ → full.
-          const tier = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
+          const score = densityMap.get(key) ?? 0;
+          // Heat tier blends booking count with buffer-time load.
+          const tier = score === 0 ? 0 : score < 1.6 ? 1 : score < 3.5 ? 2 : 3;
           const tints = [
             "transparent",
             "rgba(255,130,63,0.15)",
