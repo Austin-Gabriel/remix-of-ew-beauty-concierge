@@ -21,7 +21,8 @@ import { useDevState } from "@/dev-state/dev-state-context";
 import {
   addDays,
   availabilityFor,
-  bookingsForWeek,
+  densityPaddingForWeek,
+  realBookingsForWeek,
   dayInitial,
   fmtHourLabel,
   fmtTime,
