@@ -120,7 +120,7 @@ function CalendarPageInner() {
   );
 
   // Subtitle string per view.
-  const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av);
+  const subtitle = useViewSubtitle(view, anchor, dev.weekDensity, av, heroDay);
 
   return (
     <HomeShell>
