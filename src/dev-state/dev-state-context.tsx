@@ -104,7 +104,27 @@ const DEFAULT_STATE: DevState = {
   weekDensity: "auto",
   blockedTime: "auto",
   availability: "auto",
+  availabilityOverride: null,
 };
+
+const STORAGE_KEY = "ewa.devState.v1";
+
+interface Ctx {
+  enabled: boolean;
+  state: DevState;
+  setProState: (v: DevProState) => void;
+  setDataDensity: (v: DevDataDensity) => void;
+  setTheme: (v: DevThemeOverride) => void;
+  setMode: (v: DevMode) => void;
+  setDayContext: (v: DevDayContext) => void;
+  setLifecycle: (v: DevLifecycle) => void;
+  setBookingSource: (v: DevBookingSource) => void;
+  setWeekDensity: (v: DevWeekDensity) => void;
+  setBlockedTime: (v: DevBlockedTime) => void;
+  setAvailability: (v: DevAvailability) => void;
+  setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
+  reset: () => void;
+}
 
 const STORAGE_KEY = "ewa.devState.v1";
 
