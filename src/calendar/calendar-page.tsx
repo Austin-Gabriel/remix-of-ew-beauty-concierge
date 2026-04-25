@@ -20,7 +20,6 @@ import { ActiveBookingStrip } from "@/components/active-booking-strip";
 import { useDevState } from "@/dev-state/dev-state-context";
 import {
   addDays,
-  availabilityFor,
   densityPaddingForWeek,
   realBookingsForWeek,
   resolveAvailability,
