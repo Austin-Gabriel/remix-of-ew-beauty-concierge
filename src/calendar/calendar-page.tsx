@@ -1608,10 +1608,12 @@ function BlockBlock({
   block,
   compact,
   hourHeight,
+  onTap,
 }: {
   block: BlockedSlot;
   compact: boolean;
   hourHeight: number;
+  onTap?: () => void;
 }) {
   const top = pxFor(minutesIntoGrid(block.startsAt), hourHeight);
   const h = Math.max(
@@ -1619,8 +1621,13 @@ function BlockBlock({
     pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000, hourHeight),
   );
   return (
-    <div
-      className="absolute z-[2] overflow-hidden"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap?.();
+      }}
+      className="absolute z-[3] overflow-hidden text-left"
       style={{
         top,
         height: h,
@@ -1633,6 +1640,7 @@ function BlockBlock({
           "repeating-linear-gradient(135deg, rgba(240,235,216,0.10) 0 4px, transparent 4px 8px)",
         padding: compact ? "3px 4px" : "6px 8px",
         color: CREAM,
+        cursor: onTap ? "pointer" : "default",
       }}
     >
       {block.reason && h >= 24 ? (
