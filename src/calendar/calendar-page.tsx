@@ -1293,7 +1293,7 @@ function DayColumnInner({
         />
       ))}
 
-      {/* Travel buffers */}
+      {/* Padding (travel + prep buffers) */}
       {buffers.map((b) => (
         <BufferBlock
           key={b.id}
