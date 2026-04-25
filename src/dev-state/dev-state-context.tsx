@@ -126,23 +126,6 @@ interface Ctx {
   reset: () => void;
 }
 
-const STORAGE_KEY = "ewa.devState.v1";
-
-interface Ctx {
-  enabled: boolean;
-  state: DevState;
-  setProState: (v: DevProState) => void;
-  setDataDensity: (v: DevDataDensity) => void;
-  setTheme: (v: DevThemeOverride) => void;
-  setMode: (v: DevMode) => void;
-  setDayContext: (v: DevDayContext) => void;
-  setLifecycle: (v: DevLifecycle) => void;
-  setBookingSource: (v: DevBookingSource) => void;
-  setWeekDensity: (v: DevWeekDensity) => void;
-  setBlockedTime: (v: DevBlockedTime) => void;
-  setAvailability: (v: DevAvailability) => void;
-  reset: () => void;
-}
 
 const DevStateContext = createContext<Ctx | null>(null);
 
