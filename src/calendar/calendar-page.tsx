@@ -1665,7 +1665,9 @@ function BufferBlock({
     >
       {showInlineLabel ? (
         <span className="truncate" style={{ opacity: 0.85 }}>
-          Travel · {buffer.minutes} min · {buffer.miles} mi
+          {buffer.miles > 0
+            ? `Padding · ${buffer.minutes} min · ${buffer.miles} mi`
+            : `Padding · ${buffer.minutes} min`}
         </span>
       ) : null}
     </button>
