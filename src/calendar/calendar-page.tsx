@@ -931,6 +931,7 @@ function WeekGrid({
   heroDay,
   onOpenBooking,
   onTapEmpty,
+  onTapBlock,
   onTapBuffer,
   onTapDay,
 }: {
