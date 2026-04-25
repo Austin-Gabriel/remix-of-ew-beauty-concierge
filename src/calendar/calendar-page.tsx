@@ -479,10 +479,19 @@ function DateNavRow({
   label,
   onPrev,
   onNext,
+  view,
+  onViewChange,
 }: {
   label: string;
   onPrev: () => void;
   onNext: () => void;
+  /**
+   * When provided, the centre date label becomes a chevron-dropdown that
+   * lets the pro switch between Week and Month. Per spec this replaces the
+   * old segmented control.
+   */
+  view?: View;
+  onViewChange?: (v: View) => void;
 }) {
   const { text, borderCol } = useHomeTheme();
   return (
@@ -502,17 +511,21 @@ function DateNavRow({
       >
         <ChevronLeft size={16} />
       </button>
-      <div
-        style={{
-          fontFamily: UI,
-          fontSize: 16,
-          fontWeight: 700,
-          color: text,
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {label}
-      </div>
+      {view && onViewChange ? (
+        <ViewDropdown view={view} onChange={onViewChange} label={label} />
+      ) : (
+        <div
+          style={{
+            fontFamily: UI,
+            fontSize: 16,
+            fontWeight: 700,
+            color: text,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {label}
+        </div>
+      )}
       <button
         type="button"
         onClick={onNext}
