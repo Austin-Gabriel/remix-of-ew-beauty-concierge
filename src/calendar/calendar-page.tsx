@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Zap,
   Clock,
   CalendarOff,
   Activity,
   Settings as SettingsIcon,
+  Check,
 } from "lucide-react";
 import { HomeShell, useHomeTheme, HOME_SANS } from "@/home/home-shell";
 import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
@@ -46,9 +48,12 @@ import {
 
 /**
  * Calendar — the working surface that shows the SHAPE of a pro's time.
- *   Day · Week (hero) · Month
+ *   Week (default, hero) · Month
  * Reads bookings from /src/data/mock-bookings.ts. Tapping any booking routes
  * to /bookings/$id. Plugs into the existing dev-state toggle.
+ *
+ * Day view is no longer a top-level option. Tapping a day in Month jumps
+ * to Week with that day highlighted as the hero column.
  */
 
 const UI = `Inter, ${HOME_SANS}`;
@@ -57,7 +62,7 @@ const CREAM = "#F0EBD8";
 const MIDNIGHT = "#061C27";
 const NAVY_PANEL = "#0B2330";
 
-type View = "day" | "week" | "month";
+type View = "week" | "month";
 
 /* Grid geometry */
 const HOUR_HEIGHT_DAY = 64;
