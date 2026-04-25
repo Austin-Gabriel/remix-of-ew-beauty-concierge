@@ -864,8 +864,20 @@ function WeekView({
   const today = new Date();
   void density;
   const items = useMemo(() => realBookingsForWeek(wkStart), [wkStart]);
-  const buffers = useMemo(() => travelBuffersFor(items), [items]);
-  const blocks = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
+  const baseBuffers = useMemo(() => travelBuffersFor(items), [items]);
+  const seeded = useMemo(() => seedBlocks(wkStart, blockedPreset), [wkStart, blockedPreset]);
+  const { blocks: edits, bufferExtensions } = useCalendarEdits();
+  // Merge seeded blocks with user-added blocks (live).
+  const blocks = useMemo(() => [...seeded, ...edits], [seeded, edits]);
+  // Apply buffer extensions live: bump `minutes` by the recorded extra.
+  const buffers = useMemo(
+    () =>
+      baseBuffers.map((b) => {
+        const extra = bufferExtensions[b.id] ?? 0;
+        return extra > 0 ? { ...b, minutes: b.minutes + extra } : b;
+      }),
+    [baseBuffers, bufferExtensions],
+  );
   const stats = statsForRange(items, wkStart, addDays(wkStart, 7), availability);
 
   const rangeLabel = formatWeekRange(wkStart, addDays(wkStart, 6));
@@ -897,6 +909,7 @@ function WeekView({
         heroDay={heroDay}
         onOpenBooking={onOpenBooking}
         onTapEmpty={onTapEmpty}
+        onTapBlock={onTapBlock}
         onTapBuffer={onTapBuffer}
         onTapDay={onHeroDayChange}
       />
