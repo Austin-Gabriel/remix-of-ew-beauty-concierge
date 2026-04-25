@@ -9,6 +9,10 @@ import {
   type DevDayContext,
   type DevLifecycle,
   type DevBookingSource,
+  type DevCalendarView,
+  type DevWeekDensity,
+  type DevBlockedTime,
+  type DevAvailability,
 } from "@/dev-state/dev-state-context";
 
 /**
@@ -71,6 +75,37 @@ const BOOKING_SOURCES: { value: DevBookingSource; label: string; hint: string }[
   { value: "scheduled", label: "Scheduled", hint: "Get Ready shows Leave by behavior" },
 ];
 
+const CALENDAR_VIEWS: { value: DevCalendarView; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Calendar's default (Week)" },
+  { value: "day", label: "Day", hint: "Single-day grid" },
+  { value: "week", label: "Week", hint: "Hero — 7-day grid" },
+  { value: "month", label: "Month", hint: "Density grid" },
+];
+
+const WEEK_DENSITIES: { value: DevWeekDensity; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Use mock data as-is" },
+  { value: "empty", label: "Empty week", hint: "No bookings" },
+  { value: "light", label: "Light week", hint: "1–2 per day" },
+  { value: "typical", label: "Typical week", hint: "3–4 per day" },
+  { value: "packed", label: "Packed week", hint: "5+ per day" },
+];
+
+const BLOCKED_TIMES: { value: DevBlockedTime; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "No blocks unless seeded" },
+  { value: "none", label: "None", hint: "No blocked time" },
+  { value: "one-today", label: "1 block today", hint: "Single mid-afternoon block" },
+  { value: "multiple-week", label: "Multiple this week", hint: "A few across the week" },
+  { value: "vacation", label: "Vacation week", hint: "Whole week blocked" },
+];
+
+const AVAILABILITIES: { value: DevAvailability; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Standard hours" },
+  { value: "standard", label: "Standard", hint: "Mon–Fri 10–6" },
+  { value: "split-days", label: "Split days", hint: "Midday breaks" },
+  { value: "weekend-warrior", label: "Weekend warrior", hint: "Fri–Sun only" },
+  { value: "limited", label: "Limited", hint: "3 days only" },
+];
+
 export function DevStateToggle() {
   const {
     enabled,
@@ -82,6 +117,10 @@ export function DevStateToggle() {
     setDayContext,
     setLifecycle,
     setBookingSource,
+    setCalendarView,
+    setWeekDensity,
+    setBlockedTime,
+    setAvailability,
     reset,
   } = useDevState();
   const [open, setOpen] = useState(false);
@@ -237,6 +276,30 @@ export function DevStateToggle() {
                 value={state.dataDensity}
                 options={DATA_STATES}
                 onChange={(v) => setDataDensity(v as DevDataDensity)}
+              />
+              <Group
+                title="Calendar view"
+                value={state.calendarView}
+                options={CALENDAR_VIEWS}
+                onChange={(v) => setCalendarView(v as DevCalendarView)}
+              />
+              <Group
+                title="Week density (calendar)"
+                value={state.weekDensity}
+                options={WEEK_DENSITIES}
+                onChange={(v) => setWeekDensity(v as DevWeekDensity)}
+              />
+              <Group
+                title="Blocked time (calendar)"
+                value={state.blockedTime}
+                options={BLOCKED_TIMES}
+                onChange={(v) => setBlockedTime(v as DevBlockedTime)}
+              />
+              <Group
+                title="Availability (calendar)"
+                value={state.availability}
+                options={AVAILABILITIES}
+                onChange={(v) => setAvailability(v as DevAvailability)}
               />
               <Group
                 title="Theme override"

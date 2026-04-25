@@ -165,11 +165,20 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
   const setDayContext = useCallback((v: DevDayContext) => setState((s) => ({ ...s, dayContext: v })), []);
   const setLifecycle = useCallback((v: DevLifecycle) => setState((s) => ({ ...s, lifecycle: v })), []);
   const setBookingSource = useCallback((v: DevBookingSource) => setState((s) => ({ ...s, bookingSource: v })), []);
+  const setCalendarView = useCallback((v: DevCalendarView) => setState((s) => ({ ...s, calendarView: v })), []);
+  const setWeekDensity = useCallback((v: DevWeekDensity) => setState((s) => ({ ...s, weekDensity: v })), []);
+  const setBlockedTime = useCallback((v: DevBlockedTime) => setState((s) => ({ ...s, blockedTime: v })), []);
+  const setAvailability = useCallback((v: DevAvailability) => setState((s) => ({ ...s, availability: v })), []);
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
 
   const value = useMemo<Ctx>(
-    () => ({ enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, reset }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, reset],
+    () => ({
+      enabled, state,
+      setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
+      setCalendarView, setWeekDensity, setBlockedTime, setAvailability,
+      reset,
+    }),
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setCalendarView, setWeekDensity, setBlockedTime, setAvailability, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -188,6 +197,10 @@ export function useDevState(): Ctx {
       setDayContext: () => {},
       setLifecycle: () => {},
       setBookingSource: () => {},
+      setCalendarView: () => {},
+      setWeekDensity: () => {},
+      setBlockedTime: () => {},
+      setAvailability: () => {},
       reset: () => {},
     };
   }
