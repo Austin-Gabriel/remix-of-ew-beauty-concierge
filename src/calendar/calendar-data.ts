@@ -346,16 +346,22 @@ export function realBookingsForWeek(weekStart: Date): CalendarBooking[] {
   const weekEnd = addDays(weekStart, 7);
   return [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
     .filter((b) => b.startsAt >= weekStart && b.startsAt < weekEnd)
-    .map((b) => ({
-      id: b.id,
-      clientFirst: b.clientName.split(" ")[0],
-      service: b.service,
-      startsAt: b.startsAt,
-      durationMin: b.durationMin,
-      neighborhood: b.neighborhood,
-      isOnDemand: false,
-      priceUsd: b.priceUsd,
-    }))
+    .map((b) => {
+      const parts = b.clientName.trim().split(/\s+/);
+      const first = parts[0] ?? b.clientName;
+      const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0] ?? "").toUpperCase() : "";
+      return {
+        id: b.id,
+        clientFirst: first,
+        clientLastInitial: lastInitial,
+        service: b.service,
+        startsAt: b.startsAt,
+        durationMin: b.durationMin,
+        neighborhood: b.neighborhood,
+        isOnDemand: false,
+        priceUsd: b.priceUsd,
+      };
+    })
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
