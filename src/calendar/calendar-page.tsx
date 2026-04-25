@@ -157,7 +157,10 @@ function CalendarPageInner() {
                 navigate({ to: "/bookings/$id", params: { id } });
               }
             }}
-            onTapEmpty={(start) => setBlockSheet({ start })}
+            onTapEmpty={(start, presetMinutes) =>
+              setBlockSheet({ mode: "create", start, presetMinutes })
+            }
+            onTapBlock={(blockId) => setBlockSheet({ mode: "edit", blockId })}
             onTapBuffer={(b) => setBufferSheet(b)}
           />
         ) : null}
