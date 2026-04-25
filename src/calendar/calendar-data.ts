@@ -401,6 +401,7 @@ export function densityPaddingForWeek(
       synthesized.push({
         id: `synth-${weekStart.getTime()}-${dayIdx}-${i}`,
         clientFirst: FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)],
+        clientLastInitial: "",
         service: svc,
         startsAt,
         durationMin: dur,
