@@ -783,98 +783,163 @@ function WeekView({
         ]}
       />
 
-      <div
-        className="relative flex-1 overflow-y-auto overflow-x-hidden"
-        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
-      >
-        {/* Sticky day headers */}
-        <div
-          className="sticky top-0 z-20 flex"
-          style={{
-            backgroundColor: NAVY_PANEL,
-            borderBottom: "1px solid rgba(240,235,216,0.10)",
-          }}
-        >
-          <div style={{ width: GUTTER_W, flexShrink: 0 }} />
-          <div className="flex flex-1">
-            {days.map((d, i) => {
-              const isToday = isSameDay(d, today);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => onTapDay(d)}
-                  className="flex flex-1 flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
-                  style={{ border: "none", background: "transparent", minWidth: 0 }}
-                >
-                  <span
-                    style={{
-                      fontFamily: UI,
-                      fontSize: 9,
-                      fontWeight: 600,
-                      color: CREAM,
-                      opacity: 0.5,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {dayInitial(i)}
-                  </span>
-                  <span
-                    className="mt-1 flex items-center justify-center rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      fontFamily: UI,
-                      fontSize: 12.5,
-                      fontWeight: 700,
-                      color: isToday ? MIDNIGHT : CREAM,
-                      backgroundColor: isToday ? ORANGE : "transparent",
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    {d.getDate()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      <WeekGrid
+        days={days}
+        today={today}
+        items={items}
+        buffers={buffers}
+        blocks={blocks}
+        availability={availability}
+        onOpenBooking={onOpenBooking}
+        onTapEmpty={onTapEmpty}
+        onTapBuffer={onTapBuffer}
+        onTapDay={onTapDay}
+      />
+    </div>
+  );
+}
 
+/* Single locked CSS-grid: gutter + 7 day columns share one column system,
+   so the day-header row and time grid below are perfectly aligned. */
+function WeekGrid({
+  days,
+  today,
+  items,
+  buffers,
+  blocks,
+  availability,
+  onOpenBooking,
+  onTapEmpty,
+  onTapBuffer,
+  onTapDay,
+}: {
+  days: Date[];
+  today: Date;
+  items: CalendarBooking[];
+  buffers: TravelBuffer[];
+  blocks: BlockedSlot[];
+  availability: AvailabilityWeek;
+  onOpenBooking: (id: string) => void;
+  onTapEmpty: (start: Date) => void;
+  onTapBuffer: (b: TravelBuffer) => void;
+  onTapDay: (d: Date) => void;
+}) {
+  // Active "NOW" booking — only on today, only if time falls inside it.
+  const nowBookingId =
+    items.find(
+      (b) =>
+        isSameDay(b.startsAt, today) &&
+        today >= b.startsAt &&
+        today < new Date(b.startsAt.getTime() + b.durationMin * 60_000),
+    )?.id ?? null;
+
+  const gridTemplate = `${GUTTER_W}px repeat(7, minmax(0, 1fr))`;
+  const todayInWeek = days.some((d) => isSameDay(d, today));
+
+  return (
+    <div
+      className="relative flex-1 overflow-y-auto overflow-x-hidden"
+      style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+    >
+      {/* Sticky day-header row — same column system as the body grid below. */}
+      <div
+        className="sticky top-0 z-20 grid"
+        style={{
+          gridTemplateColumns: gridTemplate,
+          backgroundColor: NAVY_PANEL,
+          borderBottom: "1px solid rgba(240,235,216,0.10)",
+        }}
+      >
+        <div />
+        {days.map((d, i) => {
+          const isToday = isSameDay(d, today);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onTapDay(d)}
+              className="flex min-w-0 flex-col items-center justify-center py-2 transition-opacity active:opacity-70"
+              style={{ border: "none", background: "transparent" }}
+            >
+              <span
+                style={{
+                  fontFamily: UI,
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: CREAM,
+                  opacity: 0.5,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {dayInitial(i)}
+              </span>
+              <span
+                className="mt-1 flex items-center justify-center rounded-full"
+                style={{
+                  width: 24,
+                  height: 24,
+                  fontFamily: UI,
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: isToday ? MIDNIGHT : CREAM,
+                  backgroundColor: isToday ? ORANGE : "transparent",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {d.getDate()}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Body — same grid template, so columns line up exactly under headers. */}
+      <div
+        className="relative grid"
+        style={{
+          gridTemplateColumns: gridTemplate,
+          height: GRID_HOURS * HOUR_HEIGHT_WEEK,
+        }}
+      >
+        <HourGutter hourHeight={HOUR_HEIGHT_WEEK} />
+        {/* Hour lines span the 7 day columns only (not the gutter). */}
         <div
-          className="relative flex"
-          style={{ height: GRID_HOURS * HOUR_HEIGHT_WEEK }}
+          className="pointer-events-none absolute top-0 bottom-0 z-0"
+          style={{ left: GUTTER_W, right: 0 }}
         >
-          <HourGutter hourHeight={HOUR_HEIGHT_WEEK} />
-          <div className="relative flex flex-1">
-            <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
-            {days.map((d, i) => (
-              <div key={i} className="relative flex-1" style={{ minWidth: 0 }}>
-                <DayColumnInner
-                  day={d}
-                  isToday={isSameDay(d, today)}
-                  isPast={d < startOfDay(today)}
-                  availability={availability[d.getDay()] ?? []}
-                  items={items.filter((b) => isSameDay(b.startsAt, d))}
-                  buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
-                  blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
-                  freeSlots={[]}
-                  hourHeight={HOUR_HEIGHT_WEEK}
-                  compact
-                  nowBookingId={null}
-                  onOpenBooking={onOpenBooking}
-                  onTapEmpty={onTapEmpty}
-                  onTapBuffer={onTapBuffer}
-                  showInlineLabels={false}
-                />
-              </div>
-            ))}
-            {/* Global NOW line — only when today is in the visible week. */}
-            {days.some((d) => isSameDay(d, today)) ? (
-              <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
-            ) : null}
-          </div>
+          <HourLinesBg hourHeight={HOUR_HEIGHT_WEEK} />
         </div>
+        {days.map((d, i) => (
+          <div key={i} className="relative min-w-0" style={{ borderLeft: "1px solid rgba(240,235,216,0.06)" }}>
+            <DayColumnInner
+              day={d}
+              isToday={isSameDay(d, today)}
+              isPast={d < startOfDay(today)}
+              availability={availability[d.getDay()] ?? []}
+              items={items.filter((b) => isSameDay(b.startsAt, d))}
+              buffers={buffers.filter((b) => isSameDay(b.startsAt, d))}
+              blocks={blocks.filter((b) => isSameDay(b.startsAt, d))}
+              freeSlots={[]}
+              hourHeight={HOUR_HEIGHT_WEEK}
+              compact
+              nowBookingId={nowBookingId}
+              onOpenBooking={onOpenBooking}
+              onTapEmpty={onTapEmpty}
+              onTapBuffer={onTapBuffer}
+              showInlineLabels={false}
+            />
+          </div>
+        ))}
+        {/* Global NOW line spans all 7 day columns (offset past the gutter). */}
+        {todayInWeek ? (
+          <div
+            className="pointer-events-none absolute z-10"
+            style={{ left: GUTTER_W, right: 0, top: 0, bottom: 0 }}
+          >
+            <GlobalNowLine hourHeight={HOUR_HEIGHT_WEEK} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1103,12 +1168,12 @@ function BookingBlock({
         left: 2,
         right: 2,
         borderRadius: 10,
-        backgroundColor: desaturate ? "rgba(240,235,216,0.55)" : CREAM,
+        backgroundColor: desaturate ? "rgba(255,255,255,0.55)" : "#FFFFFF",
         color: MIDNIGHT,
         padding: compact ? "5px 6px" : "8px 10px",
         boxShadow: isNow
           ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
-          : "0 1px 0 rgba(0,0,0,0.15)",
+          : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
         border: isNow ? "none" : "1px solid rgba(6,28,39,0.10)",
         opacity: desaturate ? 0.7 : 1,
       }}
@@ -1131,21 +1196,23 @@ function BookingBlock({
         />
       ) : null}
 
-      {/* NOW pill (Day view, large blocks) */}
-      {isNow && !compact && h >= 44 ? (
+      {/* NOW pill — notched over the top-right corner. Day view (large) and Week (compact). */}
+      {isNow ? (
         <div
           className="absolute"
           style={{
-            top: 6,
-            right: 6,
-            backgroundColor: MIDNIGHT,
-            color: ORANGE,
+            top: compact ? -6 : -7,
+            right: compact ? -4 : -6,
+            backgroundColor: ORANGE,
+            color: MIDNIGHT,
             fontFamily: UI,
-            fontSize: 9,
+            fontSize: compact ? 8 : 9,
             fontWeight: 800,
             letterSpacing: "0.08em",
-            padding: "3px 6px",
+            padding: compact ? "2px 5px" : "3px 7px",
             borderRadius: 4,
+            zIndex: 3,
+            boxShadow: "0 1px 2px rgba(6,28,39,0.25)",
           }}
         >
           NOW
