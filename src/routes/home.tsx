@@ -177,6 +177,10 @@ function HomePage() {
               });
               return;
             }
+            if (k === "calendar") {
+              navigate({ to: "/calendar" });
+              return;
+            }
             setActiveTab(k);
           }}
           badge={
