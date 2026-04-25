@@ -2712,7 +2712,7 @@ function BufferSheet({
   };
 
   return (
-    <SheetShell title="Travel buffer" onClose={onClose}>
+    <SheetShell title="Padding" onClose={onClose}>
       <div
         style={{
           fontFamily: UI,
@@ -2722,7 +2722,9 @@ function BufferSheet({
           marginBottom: 12,
         }}
       >
-        Travel · {total} min · {buffer.miles} mi · minimum {buffer.minMinutes} min
+        {buffer.miles > 0
+          ? `Padding · ${total} min · ${buffer.miles} mi · minimum ${buffer.minMinutes} min`
+          : `Padding · ${total} min · minimum ${buffer.minMinutes} min`}
       </div>
 
       {phase === "choose" ? (
