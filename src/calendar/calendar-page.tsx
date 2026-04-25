@@ -726,6 +726,7 @@ function DayView({
   density,
   onOpenBooking,
   onTapEmpty,
+  onTapBlock,
   onTapBuffer,
 }: {
   anchor: Date;
@@ -843,6 +844,7 @@ function WeekView({
   onHeroDayChange,
   onOpenBooking,
   onTapEmpty,
+  onTapBlock,
   onTapBuffer,
 }: {
   anchor: Date;
