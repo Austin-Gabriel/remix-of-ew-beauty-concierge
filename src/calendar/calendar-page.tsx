@@ -1571,12 +1571,16 @@ function MonthView({
   onAnchorChange,
   density,
   availability,
+  view,
+  onViewChange,
   onTapDay,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
   availability: AvailabilityWeek;
+  view: View;
+  onViewChange: (v: View) => void;
   onTapDay: (d: Date) => void;
 }) {
   const { text } = useHomeTheme();
@@ -1628,6 +1632,8 @@ function MonthView({
         onNext={() =>
           onAnchorChange(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))
         }
+        view={view}
+        onViewChange={onViewChange}
       />
 
       <div className="grid grid-cols-7 gap-px px-3 pt-1">
