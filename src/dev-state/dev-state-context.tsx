@@ -218,6 +218,7 @@ export function useDevState(): Ctx {
       setWeekDensity: () => {},
       setBlockedTime: () => {},
       setAvailability: () => {},
+      setAvailabilityOverride: () => {},
       reset: () => {},
     };
   }
