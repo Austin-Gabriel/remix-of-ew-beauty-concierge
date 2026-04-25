@@ -46,6 +46,25 @@ export type DevLifecycle =
  */
 export type DevBookingSource = "auto" | "on-demand" | "scheduled";
 
+/* ---- Calendar-only dev fields ---- */
+
+/** Which calendar view to land on. "auto" = the Calendar's own default (Week). */
+export type DevCalendarView = "auto" | "day" | "week" | "month";
+
+/** Density of bookings to render across the visible week. */
+export type DevWeekDensity = "auto" | "empty" | "light" | "typical" | "packed";
+
+/** How much blocked time to seed across the week. */
+export type DevBlockedTime = "auto" | "none" | "one-today" | "multiple-week" | "vacation";
+
+/** Which availability shape the pro is keeping. */
+export type DevAvailability =
+  | "auto"
+  | "standard"
+  | "split-days"
+  | "weekend-warrior"
+  | "limited";
+
 export interface DevState {
   proState: DevProState;
   dataDensity: DevDataDensity;
@@ -54,6 +73,10 @@ export interface DevState {
   dayContext: DevDayContext;
   lifecycle: DevLifecycle;
   bookingSource: DevBookingSource;
+  calendarView: DevCalendarView;
+  weekDensity: DevWeekDensity;
+  blockedTime: DevBlockedTime;
+  availability: DevAvailability;
 }
 
 const DEFAULT_STATE: DevState = {
@@ -64,6 +87,10 @@ const DEFAULT_STATE: DevState = {
   dayContext: "auto",
   lifecycle: "none",
   bookingSource: "auto",
+  calendarView: "auto",
+  weekDensity: "auto",
+  blockedTime: "auto",
+  availability: "auto",
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
@@ -78,6 +105,10 @@ interface Ctx {
   setDayContext: (v: DevDayContext) => void;
   setLifecycle: (v: DevLifecycle) => void;
   setBookingSource: (v: DevBookingSource) => void;
+  setCalendarView: (v: DevCalendarView) => void;
+  setWeekDensity: (v: DevWeekDensity) => void;
+  setBlockedTime: (v: DevBlockedTime) => void;
+  setAvailability: (v: DevAvailability) => void;
   reset: () => void;
 }
 
