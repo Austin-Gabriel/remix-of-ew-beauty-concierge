@@ -1143,6 +1143,7 @@ function DayColumnInner({
   nowBookingId,
   onOpenBooking,
   onTapEmpty,
+  onTapBlock,
   onTapBuffer,
   showInlineLabels,
 }: {
@@ -1197,22 +1198,11 @@ function DayColumnInner({
         );
       })}
 
-      {/* Tap-to-block under everything */}
-      <button
-        type="button"
-        aria-label="Block time"
-        onClick={(e) => {
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const y = e.clientY - rect.top;
-          const minutesFromTop =
-            Math.round(((y / hourHeight) * 60) / 15) * 15;
-          const start = new Date(day);
-          start.setHours(GRID_START_HOUR, 0, 0, 0);
-          start.setMinutes(start.getMinutes() + minutesFromTop);
-          onTapEmpty(start);
-        }}
-        className="absolute inset-0 cursor-pointer"
-        style={{ background: "transparent", border: "none" }}
+      {/* Tap-or-drag-to-block under everything */}
+      <DragToBlockSurface
+        day={day}
+        hourHeight={hourHeight}
+        onCommit={(start, minutes) => onTapEmpty(start, minutes)}
       />
 
       {/* Free / Lunch dashed pills (Day view only) */}
@@ -1227,7 +1217,13 @@ function DayColumnInner({
 
       {/* Blocks */}
       {blocks.map((b) => (
-        <BlockBlock key={b.id} block={b} compact={compact} hourHeight={hourHeight} />
+        <BlockBlock
+          key={b.id}
+          block={b}
+          compact={compact}
+          hourHeight={hourHeight}
+          onTap={() => onTapBlock(b.id)}
+        />
       ))}
 
       {/* Travel buffers */}
@@ -1608,10 +1604,12 @@ function BlockBlock({
   block,
   compact,
   hourHeight,
+  onTap,
 }: {
   block: BlockedSlot;
   compact: boolean;
   hourHeight: number;
+  onTap?: () => void;
 }) {
   const top = pxFor(minutesIntoGrid(block.startsAt), hourHeight);
   const h = Math.max(
@@ -1619,8 +1617,13 @@ function BlockBlock({
     pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000, hourHeight),
   );
   return (
-    <div
-      className="absolute z-[2] overflow-hidden"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap?.();
+      }}
+      className="absolute z-[3] overflow-hidden text-left"
       style={{
         top,
         height: h,
@@ -1633,6 +1636,7 @@ function BlockBlock({
           "repeating-linear-gradient(135deg, rgba(240,235,216,0.10) 0 4px, transparent 4px 8px)",
         padding: compact ? "3px 4px" : "6px 8px",
         color: CREAM,
+        cursor: onTap ? "pointer" : "default",
       }}
     >
       {block.reason && h >= 24 ? (
@@ -1649,6 +1653,94 @@ function BlockBlock({
         >
           {block.reason}
         </span>
+      ) : null}
+    </button>
+  );
+}
+
+/* =====================================================================
+   DRAG-TO-BLOCK SURFACE
+   Tap = open Block sheet at that minute (no preset).
+   Tap-and-drag = open Block sheet pre-filled with the swept duration.
+===================================================================== */
+function DragToBlockSurface({
+  day,
+  hourHeight,
+  onCommit,
+}: {
+  day: Date;
+  hourHeight: number;
+  onCommit: (start: Date, minutes?: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<{ startMin: number; endMin: number } | null>(
+    null,
+  );
+
+  const minutesAt = (clientY: number): number => {
+    const el = ref.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const raw = (y / hourHeight) * 60;
+    return Math.max(0, Math.round(raw / 15) * 15);
+  };
+
+  const buildStart = (min: number): Date => {
+    const d = new Date(day);
+    d.setHours(GRID_START_HOUR, 0, 0, 0);
+    d.setMinutes(d.getMinutes() + min);
+    return d;
+  };
+
+  return (
+    <div
+      ref={ref}
+      role="button"
+      tabIndex={0}
+      aria-label="Block time"
+      className="absolute inset-0 cursor-pointer"
+      style={{ background: "transparent", touchAction: "none" }}
+      onPointerDown={(e) => {
+        if (e.button !== 0 && e.pointerType === "mouse") return;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        const m = minutesAt(e.clientY);
+        setDrag({ startMin: m, endMin: m });
+      }}
+      onPointerMove={(e) => {
+        if (!drag) return;
+        const m = minutesAt(e.clientY);
+        setDrag({ startMin: drag.startMin, endMin: m });
+      }}
+      onPointerUp={(e) => {
+        if (!drag) return;
+        const a = Math.min(drag.startMin, drag.endMin);
+        const b = Math.max(drag.startMin, drag.endMin);
+        const minutes = b - a;
+        setDrag(null);
+        try {
+          (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        } catch {
+          // already released
+        }
+        if (minutes < 15) onCommit(buildStart(a));
+        else onCommit(buildStart(a), minutes);
+      }}
+      onPointerCancel={() => setDrag(null)}
+    >
+      {drag && Math.abs(drag.endMin - drag.startMin) >= 15 ? (
+        <div
+          aria-hidden
+          className="absolute left-0 right-0"
+          style={{
+            top: pxFor(Math.min(drag.startMin, drag.endMin), hourHeight),
+            height: pxFor(Math.abs(drag.endMin - drag.startMin), hourHeight),
+            backgroundColor: "rgba(255,130,63,0.18)",
+            border: "1px dashed rgba(255,130,63,0.6)",
+            borderRadius: 8,
+            pointerEvents: "none",
+          }}
+        />
       ) : null}
     </div>
   );
