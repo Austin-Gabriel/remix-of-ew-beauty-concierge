@@ -1246,6 +1246,7 @@ function BookingBlock({
   isNow,
   onTap,
   compact,
+  hero = false,
   hourHeight,
 }: {
   item: CalendarBooking;
@@ -1253,6 +1254,8 @@ function BookingBlock({
   isNow: boolean;
   onTap: () => void;
   compact: boolean;
+  /** Hero column inside Week view — renders fuller content within compact layout. */
+  hero?: boolean;
   hourHeight: number;
 }) {
   const top = pxFor(minutesIntoGrid(item.startsAt), hourHeight);
