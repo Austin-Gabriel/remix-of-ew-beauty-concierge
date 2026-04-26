@@ -150,7 +150,7 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
         )}
         {status === "completed" ? <RatingCard booking={booking} /> : null}
         {booking.note ? <NotesCard note={booking.note} /> : null}
-        {status === "confirmed" && !pendingProposal ? (
+        {(status === "confirmed" || status === "pending") && !pendingProposal ? (
           <RescheduleEntryRow onClick={() => setRescheduleOpen(true)} />
         ) : null}
         <PolicyLink />
@@ -356,23 +356,43 @@ function BannerSecondaryBtn({
 }
 
 function RescheduleEntryRow({ onClick }: { onClick: () => void }) {
+  const { isDark, text } = useHomeTheme();
   return (
     <button
       type="button"
       onClick={onClick}
-      className="mt-1 self-center transition-opacity active:opacity-60"
+      className="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 transition-opacity active:opacity-70"
       style={{
+        backgroundColor: isDark ? "rgba(240,235,216,0.06)" : "rgba(6,28,39,0.04)",
+        border: `1px solid ${isDark ? "rgba(240,235,216,0.18)" : "rgba(6,28,39,0.14)"}`,
+        color: text,
         fontFamily: UI,
-        fontSize: 13,
-        fontWeight: 600,
-        color: MIDNIGHT,
-        opacity: 0.75,
-        background: "transparent",
-        border: "none",
-        textDecoration: "underline",
       }}
     >
-      Reschedule this booking
+      <span className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex items-center justify-center rounded-full"
+          style={{
+            width: 32,
+            height: 32,
+            backgroundColor: "rgba(255,130,63,0.18)",
+            color: ORANGE,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+            <path d="M14 16l2 2 4-4" />
+          </svg>
+        </span>
+        <span style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.005em" }}>
+          Reschedule booking
+        </span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55 }}>
+        <path d="M9 18l6-6-6-6" />
+      </svg>
     </button>
   );
 }
