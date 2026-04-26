@@ -77,6 +77,44 @@ const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 22;
 const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 
+/* Dynamic per-day grid range: collapse to (earliest start − 1h) … (latest end + 1h).
+ * Falls back to default 7-22 when the day has no availability ranges (e.g. day off),
+ * so the pro can still tap into the grid to block or schedule. */
+interface GridRange {
+  /** Hour the rendered grid starts at (inclusive). */
+  gridStart: number;
+  /** Hour the rendered grid ends at (inclusive). */
+  gridEnd: number;
+  /** Hour the pro's actual work day starts (inclusive). */
+  workStart: number | null;
+  /** Hour the pro's actual work day ends (inclusive). */
+  workEnd: number | null;
+}
+
+function computeGridRange(dayAv: AvailabilityRange[]): GridRange {
+  if (!dayAv.length) {
+    return { gridStart: GRID_START_HOUR, gridEnd: GRID_END_HOUR, workStart: null, workEnd: null };
+  }
+  const earliestMin = Math.min(...dayAv.map((r) => r.startMin));
+  const latestMin = Math.max(...dayAv.map((r) => r.endMin));
+  const workStart = Math.floor(earliestMin / 60);
+  const workEnd = Math.ceil(latestMin / 60);
+  const gridStart = Math.max(0, workStart - 1);
+  const gridEnd = Math.min(24, workEnd + 1);
+  return { gridStart, gridEnd, workStart, workEnd };
+}
+
+const GridRangeContext = createContext<GridRange>({
+  gridStart: GRID_START_HOUR,
+  gridEnd: GRID_END_HOUR,
+  workStart: null,
+  workEnd: null,
+});
+
+function useGridRange(): GridRange {
+  return useContext(GridRangeContext);
+}
+
 /** Local-date → "YYYY-MM-DD" so we can round-trip through search params
  *  without timezone drift (toISOString would shift to UTC). */
 function toIsoDay(d: Date): string {
