@@ -1763,7 +1763,8 @@ function BlockBlock({
   hourHeight: number;
   onTap?: () => void;
 }) {
-  const top = pxFor(minutesIntoGrid(block.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(block.startsAt, gridStart), hourHeight);
   const h = Math.max(
     18,
     pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000, hourHeight),
