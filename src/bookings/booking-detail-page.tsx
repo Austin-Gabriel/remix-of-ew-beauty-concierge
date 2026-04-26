@@ -40,6 +40,7 @@ import { RescheduleSheet } from "@/calendar/reschedule-sheet";
 const UI = HOME_SANS;
 const ORANGE = "#FF823F";
 const MIDNIGHT = "#061C27";
+const CREAM = "#F0EBD8";
 const PLATFORM_FEE_PCT = 0.1;
 
 export function BookingDetailPage({ bookingId }: { bookingId: string }) {
