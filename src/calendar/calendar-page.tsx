@@ -23,9 +23,8 @@ import {
   useCalendarEdits,
 } from "@/calendar/calendar-edits-context";
 import {
-  RescheduleProvider,
   useReschedule,
-  type PendingReschedule,
+  formatTimeLeft,
 } from "@/calendar/reschedule-context";
 import {
   addDays,
@@ -143,9 +142,7 @@ function fromIsoDay(s: string): Date {
 export function CalendarPage() {
   return (
     <CalendarEditsProvider>
-      <RescheduleProvider>
-        <CalendarPageInner />
-      </RescheduleProvider>
+      <CalendarPageInner />
     </CalendarEditsProvider>
   );
 }
@@ -260,7 +257,6 @@ function CalendarPageInner() {
         ) : null}
       </div>
 
-      <PendingReschedulePill />
       <UndoRedoPill />
 
       <BottomTabs
