@@ -312,6 +312,7 @@ export function DevStateToggle() {
                 value={state.availability}
                 options={AVAILABILITIES}
                 onChange={(v) => setAvailability(v as DevAvailability)}
+              />
               <Group
                 title="Reschedule state"
                 value={state.rescheduleSim}
