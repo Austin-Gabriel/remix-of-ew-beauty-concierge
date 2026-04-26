@@ -164,7 +164,121 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   );
 }
 
-function tabForStatus(s: BookingStatus): "upcoming" | "in-progress" | "history" {
+function PendingRescheduleBanner({
+  firstName,
+  timeLeftMs,
+  onCancel,
+}: {
+  firstName: string;
+  timeLeftMs: number;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="rounded-2xl px-4 py-3"
+      style={{
+        backgroundColor: "rgba(255,130,63,0.10)",
+        border: "1px solid rgba(255,130,63,0.45)",
+        boxShadow: `0 0 0 2px rgba(255,130,63,0.10)`,
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          aria-hidden
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 9999,
+            backgroundColor: ORANGE,
+            marginTop: 6,
+            flexShrink: 0,
+          }}
+        />
+        <div className="min-w-0 flex-1">
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: "#7A2E0E",
+            }}
+          >
+            Pending reschedule
+          </div>
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 14,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              marginTop: 2,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Awaiting {firstName}'s approval · {formatTimeLeft(timeLeftMs)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
+          style={{
+            border: "1px solid rgba(6,28,39,0.18)",
+            backgroundColor: "transparent",
+            color: MIDNIGHT,
+            fontFamily: UI,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Message {firstName}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
+          style={{
+            border: "1px solid rgba(6,28,39,0.18)",
+            backgroundColor: "transparent",
+            color: MIDNIGHT,
+            fontFamily: UI,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Cancel request
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RescheduleEntryRow({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-1 self-center transition-opacity active:opacity-60"
+      style={{
+        fontFamily: UI,
+        fontSize: 13,
+        fontWeight: 600,
+        color: MIDNIGHT,
+        opacity: 0.75,
+        background: "transparent",
+        border: "none",
+        textDecoration: "underline",
+      }}
+    >
+      Reschedule this booking
+    </button>
+  );
+}
+
+
   if (s === "in-progress") return "in-progress";
   if (s === "completed" || s === "cancelled") return "history";
   return "upcoming";
