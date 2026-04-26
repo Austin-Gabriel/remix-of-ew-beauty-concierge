@@ -2225,7 +2225,7 @@ function BookingBlock({
           ) : null}
         </>
       )}
-    </button>
+    </div>
   );
 }
 
