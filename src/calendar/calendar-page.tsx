@@ -1082,6 +1082,183 @@ function WeekView({
 }
 
 /**
+ * Day-off panel — shown in place of the time grid when the pro has zero
+ * availability for the selected day. The day is closed for client bookings,
+ * but the pro can still drop a personal block. Existing blocks/bookings on
+ * a day-off render as compact cards in the panel so nothing is hidden.
+ */
+function DayOffPanel({
+  day,
+  existingBlocks,
+  existingItems,
+  onEditAvailability,
+  onAddBlock,
+  onTapBlock,
+  onOpenBooking,
+}: {
+  day: Date;
+  existingBlocks: BlockedSlot[];
+  existingItems: CalendarBooking[];
+  onEditAvailability: () => void;
+  onAddBlock: () => void;
+  onTapBlock: (id: string) => void;
+  onOpenBooking: (id: string) => void;
+}) {
+  const dayLabel = day.toLocaleDateString(undefined, { weekday: "long" });
+  const hasAny = existingBlocks.length > 0 || existingItems.length > 0;
+  return (
+    <div
+      className="relative flex flex-1 flex-col items-stretch px-5 pb-8 pt-10"
+      style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+    >
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div
+          aria-hidden
+          className="mb-5 flex items-center justify-center rounded-full"
+          style={{
+            width: 56,
+            height: 56,
+            border: `1px dashed ${CREAM}`,
+            opacity: 0.35,
+          }}
+        >
+          <span style={{ fontFamily: UI, fontSize: 22, color: CREAM, opacity: 0.75 }}>
+            ✕
+          </span>
+        </div>
+        <h2
+          style={{
+            fontFamily: UI,
+            fontSize: 22,
+            fontWeight: 700,
+            color: CREAM,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Day off
+        </h2>
+        <p
+          className="mt-2 max-w-[280px]"
+          style={{
+            fontFamily: UI,
+            fontSize: 13,
+            color: CREAM,
+            opacity: 0.55,
+            lineHeight: 1.45,
+          }}
+        >
+          {dayLabel} is closed for client bookings. You can still drop a personal
+          block here.
+        </p>
+        <div className="mt-5 flex flex-col items-stretch gap-2">
+          <button
+            type="button"
+            onClick={onAddBlock}
+            className="rounded-full px-5 py-2.5 transition-opacity active:opacity-80"
+            style={{
+              fontFamily: UI,
+              fontSize: 14,
+              fontWeight: 600,
+              color: MIDNIGHT,
+              backgroundColor: ORANGE,
+              border: "none",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Add personal block
+          </button>
+          <button
+            type="button"
+            onClick={onEditAvailability}
+            className="px-2 py-1 transition-opacity active:opacity-70"
+            style={{
+              fontFamily: UI,
+              fontSize: 12,
+              fontWeight: 600,
+              color: CREAM,
+              opacity: 0.7,
+              background: "transparent",
+              border: "none",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Edit availability
+          </button>
+        </div>
+      </div>
+
+      {hasAny ? (
+        <div
+          className="mt-6 rounded-2xl p-3"
+          style={{
+            backgroundColor: "rgba(240,235,216,0.04)",
+            border: "1px solid rgba(240,235,216,0.08)",
+          }}
+        >
+          <div
+            className="mb-2 px-1"
+            style={{
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 700,
+              color: CREAM,
+              opacity: 0.5,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Already on this day
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {existingItems.map((b) => (
+              <li key={b.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenBooking(b.id)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-opacity active:opacity-80"
+                  style={{
+                    backgroundColor: "rgba(255,130,63,0.10)",
+                    border: "1px solid rgba(255,130,63,0.25)",
+                  }}
+                >
+                  <span style={{ fontFamily: UI, fontSize: 13, fontWeight: 600, color: CREAM }}>
+                    {b.serviceName ?? "Booking"}
+                  </span>
+                  <span style={{ fontFamily: UI, fontSize: 12, color: CREAM, opacity: 0.7 }}>
+                    {fmtTimeShort(b.startsAt)}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {existingBlocks.map((bl) => (
+              <li key={bl.id}>
+                <button
+                  type="button"
+                  onClick={() => onTapBlock(bl.id)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-opacity active:opacity-80"
+                  style={{
+                    backgroundColor: "rgba(240,235,216,0.06)",
+                    border: "1px solid rgba(240,235,216,0.12)",
+                  }}
+                >
+                  <span style={{ fontFamily: UI, fontSize: 13, fontWeight: 600, color: CREAM }}>
+                    {bl.label ?? "Personal block"}
+                  </span>
+                  <span style={{ fontFamily: UI, fontSize: 12, color: CREAM, opacity: 0.7 }}>
+                    {fmtTimeShort(bl.startsAt)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * New Week layout (Booksy-style):
  *   Top  — horizontal week strip (S 19, M 20, T 21, …) with bagel-circle
  *          highlight on the selected day. Swipe left/right paginates by week.
