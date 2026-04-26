@@ -1953,6 +1953,7 @@ function DragToBlockSurface({
   onCommit: (start: Date, minutes?: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { gridStart } = useGridRange();
   const [drag, setDrag] = useState<{ startMin: number; endMin: number } | null>(
     null,
   );
@@ -1968,7 +1969,7 @@ function DragToBlockSurface({
 
   const buildStart = (min: number): Date => {
     const d = new Date(day);
-    d.setHours(GRID_START_HOUR, 0, 0, 0);
+    d.setHours(gridStart, 0, 0, 0);
     d.setMinutes(d.getMinutes() + min);
     return d;
   };
