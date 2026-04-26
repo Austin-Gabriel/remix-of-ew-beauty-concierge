@@ -23,6 +23,7 @@ export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";
 
 export interface PendingReschedule {
   bookingId: string;
+  clientLabel: string;
   originalStart: Date;
   originalDurationMin: number;
   proposedStart: Date;
