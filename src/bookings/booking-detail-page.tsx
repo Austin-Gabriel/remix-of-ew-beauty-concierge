@@ -140,7 +140,12 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
             timeLeftMs={pendingProposal.expiresAt.getTime() - Date.now()}
           />
         ) : null}
-        <HeroBlock booking={booking} status={status} />
+        <HeroBlock
+          booking={booking}
+          status={status}
+          canReschedule={(status === "confirmed" || status === "pending") && !pendingProposal}
+          onReschedule={() => setRescheduleOpen(true)}
+        />
         <ServiceCard booking={booking} dimmed={status === "cancelled"} />
         <LocationCard booking={booking} revealAddress={false} />
         {status === "cancelled" ? (
@@ -150,9 +155,6 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
         )}
         {status === "completed" ? <RatingCard booking={booking} /> : null}
         {booking.note ? <NotesCard note={booking.note} /> : null}
-        {(status === "confirmed" || status === "pending") && !pendingProposal ? (
-          <RescheduleEntryRow onClick={() => setRescheduleOpen(true)} />
-        ) : null}
         <PolicyLink />
       </div>
 
@@ -355,48 +357,6 @@ function BannerSecondaryBtn({
   );
 }
 
-function RescheduleEntryRow({ onClick }: { onClick: () => void }) {
-  const { isDark, text } = useHomeTheme();
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3.5 transition-opacity active:opacity-70"
-      style={{
-        backgroundColor: isDark ? "rgba(240,235,216,0.06)" : "rgba(6,28,39,0.04)",
-        border: `1px solid ${isDark ? "rgba(240,235,216,0.18)" : "rgba(6,28,39,0.14)"}`,
-        color: text,
-        fontFamily: UI,
-      }}
-    >
-      <span className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="flex items-center justify-center rounded-full"
-          style={{
-            width: 32,
-            height: 32,
-            backgroundColor: "rgba(255,130,63,0.18)",
-            color: ORANGE,
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-            <path d="M14 16l2 2 4-4" />
-          </svg>
-        </span>
-        <span style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.005em" }}>
-          Reschedule booking
-        </span>
-      </span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55 }}>
-        <path d="M9 18l6-6-6-6" />
-      </svg>
-    </button>
-  );
-}
-
 function tabForStatus(s: BookingStatus): "upcoming" | "in-progress" | "history" {
   if (s === "in-progress") return "in-progress";
   if (s === "completed" || s === "cancelled") return "history";
@@ -454,21 +414,23 @@ function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) 
 
 /* ---------------- Hero ---------------- */
 
-function HeroBlock({ booking, status }: { booking: Booking; status: BookingStatus }) {
+function HeroBlock({
+  booking,
+  status,
+  canReschedule,
+  onReschedule,
+}: {
+  booking: Booking;
+  status: BookingStatus;
+  canReschedule: boolean;
+  onReschedule: () => void;
+}) {
   const { isDark, text } = useHomeTheme();
-  // Pending hides last name (privacy). Otherwise show full name.
   const displayName =
     status === "pending" ? booking.clientName.split(" ")[0] : booking.clientName;
-  // Relationship label (tiered, no numbered counts).
   const relationship = clientRelationshipLabel(booking);
-  // Contact actions: available as soon as the request lands and through the
-  // appointment. Hidden once the booking is closed (completed/cancelled),
-  // since chats and calls happen elsewhere post-service.
   const showContact =
     status === "pending" || status === "confirmed" || status === "in-progress";
-  // Theme-aware ring: cardBorder is tuned for white card surfaces and goes
-  // invisible on the dark page background. Use a brighter cream stroke in
-  // dark mode so the circle reads at the same weight as it does in light.
   const iconBtn: React.CSSProperties = {
     width: 36,
     height: 36,
@@ -483,21 +445,15 @@ function HeroBlock({ booking, status }: { booking: Booking; status: BookingStatu
   };
   return (
     <div className="flex flex-col gap-3 pt-3">
-      {/* Top row: status pill aligned right, on its own line so the name
-          can breathe at full width with the avatar. */}
       <div className="flex justify-end">
         <StatusPill status={status} />
       </div>
-      {/* Identity row: avatar + (name, relationship · date) + contact icons. */}
       <div className="flex items-center gap-3.5">
         <div
           className="flex shrink-0 items-center justify-center rounded-full"
           style={{
             width: 52,
             height: 52,
-            // The hero avatar sits directly on the page background (not on a
-            // white card like the list rows), so dark mode needs a brighter
-            // fill + lighter monogram to stay legible on midnight.
             backgroundColor: isDark
               ? "rgba(255,130,63,0.22)"
               : "rgba(255,130,63,0.16)",
@@ -530,16 +486,29 @@ function HeroBlock({ booking, status }: { booking: Booking; status: BookingStatu
               color: text,
               opacity: 0.6,
               marginTop: 4,
-              lineHeight: 1.3,
+              lineHeight: 1.35,
               fontVariantNumeric: "tabular-nums",
               textDecoration: status === "cancelled" ? "line-through" : "none",
             }}
           >
-            {relationship} · {formatBookingDate(booking.startsAt)}
+            {relationship}
+            <br />
+            {formatBookingDate(booking.startsAt)}
           </p>
         </div>
         {showContact ? (
           <div className="flex items-center gap-2">
+            {canReschedule ? (
+              <button
+                type="button"
+                aria-label={`Reschedule ${displayName}`}
+                onClick={onReschedule}
+                className="transition-opacity active:opacity-60"
+                style={iconBtn}
+              >
+                <CalendarReschedIcon size={15} />
+              </button>
+            ) : null}
             <button
               type="button"
               aria-label={`Message ${displayName}`}
@@ -560,6 +529,25 @@ function HeroBlock({ booking, status }: { booking: Booking; status: BookingStatu
         ) : null}
       </div>
     </div>
+  );
+}
+
+function CalendarReschedIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <path d="M14 16l2 2 4-4" />
+    </svg>
   );
 }
 
