@@ -201,13 +201,13 @@ function CalendarPageInner() {
           onClose={() => setOverflowOpen(false)}
           onAvailability={() => {
             setOverflowOpen(false);
-            setAvailabilitySheetOpen(true);
+            setAvailabilitySheetOpen({ fromMore: true });
           }}
           onBlock={() => {
             setOverflowOpen(false);
             const start = new Date();
             start.setMinutes(0, 0, 0);
-            setBlockSheet({ mode: "create", start });
+            setBlockSheet({ mode: "create", start, fromMore: true });
           }}
         />
       ) : null}
@@ -217,6 +217,14 @@ function CalendarPageInner() {
           mode={blockSheet}
           density={dev.weekDensity}
           onClose={() => setBlockSheet(null)}
+          onBack={
+            blockSheet.mode === "create" && blockSheet.fromMore
+              ? () => {
+                  setBlockSheet(null);
+                  setOverflowOpen(true);
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -228,6 +236,14 @@ function CalendarPageInner() {
         <AvailabilitySheet
           availability={av}
           onClose={() => setAvailabilitySheetOpen(false)}
+          onBack={
+            availabilitySheetOpen.fromMore
+              ? () => {
+                  setAvailabilitySheetOpen(false);
+                  setOverflowOpen(true);
+                }
+              : undefined
+          }
         />
       ) : null}
     </HomeShell>
