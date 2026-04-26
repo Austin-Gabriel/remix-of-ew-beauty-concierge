@@ -1256,33 +1256,51 @@ function WeekStripAndDay({
         </div>
       </div>
 
-      {/* SINGLE-DAY VERTICAL GRID — full-width readable cards */}
-      <GridRangeContext.Provider value={computeGridRange(dayAv)}>
-        <DayGridScroller dayAv={dayAv}>
-          <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
-          <div className="relative flex-1" style={{ paddingRight: 8 }}>
-            <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
-            <DayColumnInner
-              day={heroDay}
-              isToday={isHeroToday}
-              isPast={isPast}
-              availability={dayAv}
-              items={dayItems}
-              buffers={dayBuffers}
-              blocks={dayBlocks}
-              freeSlots={free}
-              hourHeight={HOUR_HEIGHT_DAY}
-              compact={false}
-              nowBookingId={nowBookingId}
-              onOpenBooking={onOpenBooking}
-              onTapEmpty={onTapEmpty}
-              onTapBlock={onTapBlock}
-              onTapBuffer={onTapBuffer}
-              showInlineLabels
-            />
-          </div>
-        </DayGridScroller>
-      </GridRangeContext.Provider>
+      {/* SINGLE-DAY VERTICAL GRID — full-width readable cards.
+          When the pro has no availability for this day, swap in the
+          Day-off panel instead of the time grid. */}
+      {dayAv.length === 0 ? (
+        <DayOffPanel
+          day={heroDay}
+          existingBlocks={dayBlocks}
+          existingItems={dayItems}
+          onEditAvailability={onEditAvailability}
+          onAddBlock={() => {
+            const start = new Date(heroDay);
+            start.setHours(9, 0, 0, 0);
+            onTapEmpty(start);
+          }}
+          onTapBlock={onTapBlock}
+          onOpenBooking={onOpenBooking}
+        />
+      ) : (
+        <GridRangeContext.Provider value={computeGridRange(dayAv)}>
+          <DayGridScroller dayAv={dayAv}>
+            <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
+            <div className="relative flex-1" style={{ paddingRight: 8 }}>
+              <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
+              <DayColumnInner
+                day={heroDay}
+                isToday={isHeroToday}
+                isPast={isPast}
+                availability={dayAv}
+                items={dayItems}
+                buffers={dayBuffers}
+                blocks={dayBlocks}
+                freeSlots={free}
+                hourHeight={HOUR_HEIGHT_DAY}
+                compact={false}
+                nowBookingId={nowBookingId}
+                onOpenBooking={onOpenBooking}
+                onTapEmpty={onTapEmpty}
+                onTapBlock={onTapBlock}
+                onTapBuffer={onTapBuffer}
+                showInlineLabels
+              />
+            </div>
+          </DayGridScroller>
+        </GridRangeContext.Provider>
+      )}
     </div>
   );
 }
