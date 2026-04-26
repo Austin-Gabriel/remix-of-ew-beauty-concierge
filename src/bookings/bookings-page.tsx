@@ -397,6 +397,7 @@ function TodayHorizonGroup({
   onDecline: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
+  const { proposalFor, tick } = useReschedule();
   if (bookings.length === 0) return null;
 
   const entries: TimelineEntry[] = bookings.map((b, i) => {
@@ -413,6 +414,7 @@ function TodayHorizonGroup({
       isNext: i === 0 && b.status === "confirmed",
       gapBefore,
       pending: pendingPropsFor(b, onAccept, onDecline),
+      pendingReschedule: pendingReschedulePropFor(b.id, proposalFor, tick),
       onOpen: () => onOpen(b.id),
     };
   });
