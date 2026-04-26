@@ -894,12 +894,7 @@ function WeekView({
     [baseBuffers, bufferExtensions],
   );
 
-  // Per spec: stat strip reflects the SELECTED day, not the whole week.
-  const dayItems = useMemo(
-    () => items.filter((b) => isSameDay(b.startsAt, heroDay)),
-    [items, heroDay],
-  );
-  const dayStats = statsForDay(dayItems, today);
+  // Stat strip removed from Week view per spec; subtitle handles summary.
 
   // The header dropdown label still shows the selected day (Booksy-style):
   // "Today" if it's today, otherwise the weekday name.
