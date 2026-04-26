@@ -228,7 +228,7 @@ function OutgoingRescheduleBanner({
               fontFamily: UI,
               fontSize: 14.5,
               fontWeight: 700,
-              color: MIDNIGHT,
+              color: bodyColor,
               marginTop: 3,
               letterSpacing: "-0.005em",
             }}
