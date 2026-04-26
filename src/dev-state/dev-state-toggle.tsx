@@ -312,6 +312,16 @@ export function DevStateToggle() {
                 value={state.availability}
                 options={AVAILABILITIES}
                 onChange={(v) => setAvailability(v as DevAvailability)}
+              <Group
+                title="Reschedule state"
+                value={state.rescheduleSim}
+                options={RESCHEDULE_SIMS.map((r) => ({
+                  ...r,
+                  hint: reschedule.latestPending
+                    ? r.hint
+                    : `${r.hint} · no pending proposal`,
+                }))}
+                onChange={(v) => setRescheduleSim(v as DevRescheduleSim)}
               />
               <Group
                 title="Theme override"
