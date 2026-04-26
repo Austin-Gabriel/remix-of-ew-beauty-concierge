@@ -231,6 +231,7 @@ function CalendarPageInner() {
             }
             onTapBlock={(blockId) => setBlockSheet({ mode: "edit", blockId })}
             onTapBuffer={(b) => setBufferSheet(b)}
+            onEditAvailability={() => setAvailabilitySheetOpen({})}
           />
         ) : null}
 
