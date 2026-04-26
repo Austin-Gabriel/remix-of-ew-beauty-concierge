@@ -278,7 +278,7 @@ function RescheduleEntryRow({ onClick }: { onClick: () => void }) {
   );
 }
 
-
+function tabForStatus(s: BookingStatus): "upcoming" | "in-progress" | "history" {
   if (s === "in-progress") return "in-progress";
   if (s === "completed" || s === "cancelled") return "history";
   return "upcoming";
