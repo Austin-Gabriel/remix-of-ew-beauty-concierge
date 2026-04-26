@@ -23,6 +23,11 @@ import {
   useCalendarEdits,
 } from "@/calendar/calendar-edits-context";
 import {
+  RescheduleProvider,
+  useReschedule,
+  type PendingReschedule,
+} from "@/calendar/reschedule-context";
+import {
   addDays,
   densityPaddingForWeek,
   realBookingsForWeek,
@@ -138,7 +143,9 @@ function fromIsoDay(s: string): Date {
 export function CalendarPage() {
   return (
     <CalendarEditsProvider>
-      <CalendarPageInner />
+      <RescheduleProvider>
+        <CalendarPageInner />
+      </RescheduleProvider>
     </CalendarEditsProvider>
   );
 }
@@ -253,6 +260,7 @@ function CalendarPageInner() {
         ) : null}
       </div>
 
+      <PendingReschedulePill />
       <UndoRedoPill />
 
       <BottomTabs
@@ -1727,19 +1735,198 @@ function BookingBlock({
   hourHeight: number;
 }) {
   const { gridStart } = useGridRange();
-  const top = pxFor(minutesIntoGrid(item.startsAt, gridStart), hourHeight);
-  const h = Math.max(28, pxFor(item.durationMin, hourHeight));
+  const reschedule = useReschedule();
+  const proposal = reschedule.proposalFor(item.id);
+  const override = reschedule.overrides[item.id];
+
+  const effStart = override?.startsAt ?? item.startsAt;
+  const effDur = override?.durationMin ?? item.durationMin;
+
+  const showProposed = proposal?.status === "pending";
+  const renderStart = showProposed ? proposal!.proposedStart : effStart;
+  const renderDur = showProposed ? proposal!.proposedDurationMin : effDur;
+
+  const top = pxFor(minutesIntoGrid(renderStart, gridStart), hourHeight);
+  const h = Math.max(28, pxFor(renderDur, hourHeight));
   const tiny = h < 44;
   const initials = (item.clientFirst[0] ?? "").toUpperCase();
 
+  // ---- gesture state ----
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [armed, setArmed] = useState(false);
+  const [drag, setDrag] = useState<
+    | null
+    | {
+        kind: "move" | "resize-top" | "resize-bottom";
+        anchorMinIntoGrid: number;
+        startMinIntoGrid: number;
+        durMin: number;
+        liveStartMin: number;
+        liveDurMin: number;
+      }
+  >(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const tappedRef = useRef(true);
+
+  const minutesAtClientY = (clientY: number): number => {
+    const grid = wrapperRef.current?.parentElement;
+    if (!grid) return 0;
+    const rect = grid.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const raw = (y / hourHeight) * 60;
+    return Math.max(0, Math.round(raw / 15) * 15);
+  };
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTap = () => {
+    if (armed || drag) return;
+    if (!tappedRef.current) return;
+    onTap();
+  };
+
+  const startMove = (clientY: number) => {
+    const m = minutesAtClientY(clientY);
+    const startMin = minutesIntoGrid(renderStart, gridStart);
+    setDrag({
+      kind: "move",
+      anchorMinIntoGrid: m,
+      startMinIntoGrid: startMin,
+      durMin: renderDur,
+      liveStartMin: startMin,
+      liveDurMin: renderDur,
+    });
+  };
+
+  const startResize = (
+    kind: "resize-top" | "resize-bottom",
+    clientY: number,
+  ) => {
+    const m = minutesAtClientY(clientY);
+    const startMin = minutesIntoGrid(renderStart, gridStart);
+    setDrag({
+      kind,
+      anchorMinIntoGrid: m,
+      startMinIntoGrid: startMin,
+      durMin: renderDur,
+      liveStartMin: startMin,
+      liveDurMin: renderDur,
+    });
+  };
+
+  const updateDrag = (clientY: number) => {
+    setDrag((d) => {
+      if (!d) return d;
+      const m = minutesAtClientY(clientY);
+      const delta = m - d.anchorMinIntoGrid;
+      if (d.kind === "move") {
+        const next = Math.max(0, d.startMinIntoGrid + delta);
+        return { ...d, liveStartMin: next };
+      }
+      if (d.kind === "resize-top") {
+        let next = Math.max(0, d.startMinIntoGrid + delta);
+        const newDur = d.durMin + (d.startMinIntoGrid - next);
+        if (newDur < 15) {
+          next = d.startMinIntoGrid + d.durMin - 15;
+          return { ...d, liveStartMin: next, liveDurMin: 15 };
+        }
+        return { ...d, liveStartMin: next, liveDurMin: newDur };
+      }
+      const newDur = Math.max(15, d.durMin + delta);
+      return { ...d, liveDurMin: newDur };
+    });
+  };
+
+  const commitDrag = () => {
+    if (!drag) return;
+    const minOfDay = drag.liveStartMin + gridStart * 60;
+    const newStart = new Date(renderStart);
+    newStart.setHours(0, 0, 0, 0);
+    newStart.setMinutes(minOfDay);
+    const newDur = drag.liveDurMin;
+    setDrag(null);
+    setArmed(false);
+    if (
+      newStart.getTime() === renderStart.getTime() &&
+      newDur === renderDur
+    ) {
+      return;
+    }
+    reschedule.propose({
+      bookingId: item.id,
+      clientLabel:
+        item.clientFirst +
+        (item.clientLastInitial ? ` ${item.clientLastInitial}.` : ""),
+      originalStart: effStart,
+      originalDurationMin: effDur,
+      proposedStart: newStart,
+      proposedDurationMin: newDur,
+    });
+  };
+
+  const isPending = showProposed;
+
   return (
-    <button
-      type="button"
+    <div
+      ref={wrapperRef}
+      role="button"
+      tabIndex={0}
       onClick={(e) => {
         e.stopPropagation();
-        onTap();
+        handleTap();
       }}
-      className="absolute z-[2] overflow-hidden text-left transition-opacity active:opacity-80"
+      onPointerDown={(e) => {
+        if (e.button !== 0 && e.pointerType === "mouse") return;
+        e.stopPropagation();
+        tappedRef.current = true;
+        const target = e.currentTarget as HTMLElement;
+        clearLongPress();
+        longPressTimerRef.current = window.setTimeout(() => {
+          setArmed(true);
+          longPressTimerRef.current = null;
+        }, 450);
+        try {
+          target.setPointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+      }}
+      onPointerMove={(e) => {
+        if (drag) {
+          updateDrag(e.clientY);
+          tappedRef.current = false;
+          return;
+        }
+        if (armed && !drag) {
+          startMove(e.clientY);
+          tappedRef.current = false;
+        }
+      }}
+      onPointerUp={(e) => {
+        clearLongPress();
+        const target = e.currentTarget as HTMLElement;
+        try {
+          target.releasePointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+        if (drag) {
+          commitDrag();
+        } else {
+          setArmed(false);
+        }
+      }}
+      onPointerCancel={() => {
+        clearLongPress();
+        setDrag(null);
+        setArmed(false);
+      }}
+      className="absolute z-[2] overflow-visible text-left transition-opacity active:opacity-80"
       style={{
         top,
         height: h,
@@ -1749,13 +1936,134 @@ function BookingBlock({
         backgroundColor: desaturate ? "rgba(255,255,255,0.55)" : "#FFFFFF",
         color: MIDNIGHT,
         padding: compact ? "5px 6px" : "8px 10px",
-        boxShadow: isNow
-          ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
-          : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
-        border: isNow ? "none" : "1px solid rgba(6,28,39,0.10)",
-        opacity: desaturate ? 0.7 : 1,
+        boxShadow: isPending
+          ? `0 0 0 2px ${ORANGE}`
+          : isNow
+            ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
+            : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
+        border: isPending
+          ? "1px dashed rgba(255,130,63,0.85)"
+          : isNow
+            ? "none"
+            : "1px solid rgba(6,28,39,0.10)",
+        opacity: desaturate ? 0.7 : isPending ? 0.85 : 1,
+        outline: armed && !drag ? `2px solid ${ORANGE}` : "none",
+        outlineOffset: armed && !drag ? 2 : 0,
+        cursor: armed ? "grab" : "pointer",
+        touchAction: armed || drag ? "none" : "auto",
       }}
     >
+      {armed ? (
+        <>
+          <div
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              clearLongPress();
+              startResize("resize-top", e.clientY);
+            }}
+            className="absolute left-0 right-0"
+            style={{
+              top: -6,
+              height: 14,
+              cursor: "ns-resize",
+              touchAction: "none",
+              zIndex: 4,
+            }}
+          >
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 4,
+                transform: "translateX(-50%)",
+                width: 28,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: ORANGE,
+              }}
+            />
+          </div>
+          <div
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              clearLongPress();
+              startResize("resize-bottom", e.clientY);
+            }}
+            className="absolute left-0 right-0"
+            style={{
+              bottom: -6,
+              height: 14,
+              cursor: "ns-resize",
+              touchAction: "none",
+              zIndex: 4,
+            }}
+          >
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: "50%",
+                bottom: 4,
+                transform: "translateX(-50%)",
+                width: 28,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: ORANGE,
+              }}
+            />
+          </div>
+        </>
+      ) : null}
+
+      {drag ? (
+        <div
+          aria-hidden
+          className="absolute"
+          style={{
+            top: pxFor(
+              drag.liveStartMin - minutesIntoGrid(renderStart, gridStart),
+              hourHeight,
+            ),
+            left: -2,
+            right: -2,
+            height: pxFor(drag.liveDurMin, hourHeight),
+            borderRadius: 10,
+            backgroundColor: "rgba(255,130,63,0.22)",
+            border: `2px dashed ${ORANGE}`,
+            zIndex: 5,
+            pointerEvents: "none",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "flex-end",
+            padding: 4,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              backgroundColor: ORANGE,
+              padding: "2px 6px",
+              borderRadius: 4,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmtTimeShort(
+              (() => {
+                const d = new Date(renderStart);
+                d.setHours(0, 0, 0, 0);
+                d.setMinutes(drag.liveStartMin + gridStart * 60);
+                return d;
+              })(),
+            )}{" "}
+            · {drag.liveDurMin}m
+          </div>
+        </div>
+      ) : null}
+
       {/* On-demand zap glyph */}
       {item.isOnDemand && !compact ? (
         <Zap
@@ -1921,7 +2229,7 @@ function BookingBlock({
           ) : null}
         </>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -2178,6 +2486,130 @@ function UndoRedoPill() {
         >
           <X size={12} strokeWidth={2.25} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   PENDING RESCHEDULE BUBBLE
+===================================================================== */
+function PendingReschedulePill() {
+  const { proposals, cancel, simulateAccept, simulateDecline, tick } =
+    useReschedule();
+  void tick;
+  const pending = proposals.filter((p) => p.status === "pending");
+  const latest: PendingReschedule | undefined = pending[pending.length - 1];
+  if (!latest) return null;
+
+  const msLeft = Math.max(0, latest.expiresAt.getTime() - Date.now());
+  const secLeft = Math.ceil(msLeft / 1000);
+  const mm = Math.floor(secLeft / 60);
+  const ss = secLeft % 60;
+
+  return (
+    <div
+      className="pointer-events-none fixed bottom-40 left-0 right-0 z-40 flex justify-center px-4"
+      style={{ fontFamily: UI }}
+    >
+      <div
+        className="pointer-events-auto flex w-full max-w-md flex-col gap-2 rounded-2xl border p-3 shadow-lg"
+        style={{
+          backgroundColor: "rgba(6,28,39,0.94)",
+          borderColor: "rgba(255,130,63,0.55)",
+          color: CREAM,
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        <div className="flex items-start gap-2">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-full"
+            style={{
+              width: 28,
+              height: 28,
+              backgroundColor: "rgba(255,130,63,0.22)",
+              color: ORANGE,
+              fontSize: 11,
+              fontWeight: 800,
+            }}
+          >
+            ⟳
+          </div>
+          <div className="min-w-0 flex-1">
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "-0.005em",
+              }}
+            >
+              Awaiting {latest.clientLabel || "client"}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                opacity: 0.7,
+                marginTop: 2,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {fmtTimeShort(latest.originalStart)} →{" "}
+              {fmtTimeShort(latest.proposedStart)} ·{" "}
+              {latest.proposedDurationMin}m
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: ORANGE,
+              fontVariantNumeric: "tabular-nums",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {mm}:{String(ss).padStart(2, "0")}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => cancel(latest.bookingId)}
+            className="flex-1 rounded-lg py-2 text-xs font-semibold transition-opacity active:opacity-70"
+            style={{
+              backgroundColor: "rgba(240,235,216,0.08)",
+              color: CREAM,
+              border: "1px solid rgba(240,235,216,0.18)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => simulateDecline(latest.bookingId)}
+            className="flex-1 rounded-lg py-2 text-xs font-semibold transition-opacity active:opacity-70"
+            style={{
+              backgroundColor: "rgba(240,235,216,0.06)",
+              color: CREAM,
+              border: "1px dashed rgba(240,235,216,0.25)",
+            }}
+            title="Dev: simulate client decline"
+          >
+            Sim. decline
+          </button>
+          <button
+            type="button"
+            onClick={() => simulateAccept(latest.bookingId)}
+            className="flex-1 rounded-lg py-2 text-xs font-semibold transition-opacity active:opacity-70"
+            style={{
+              backgroundColor: ORANGE,
+              color: MIDNIGHT,
+              border: "none",
+            }}
+            title="Dev: simulate client accept"
+          >
+            Sim. accept
+          </button>
+        </div>
       </div>
     </div>
   );
