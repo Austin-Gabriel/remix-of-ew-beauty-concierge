@@ -2288,6 +2288,28 @@ function BookingBlock({
       )}
     </div>
   );
+
+  return (
+    <>
+      {ghost}
+      {card}
+      {showProposed && proposal ? (
+        <PendingActionSheet
+          open={pendingSheetOpen}
+          onClose={() => setPendingSheetOpen(false)}
+          proposal={proposal}
+          onCancel={() => {
+            reschedule.cancel(item.id);
+            setPendingSheetOpen(false);
+          }}
+          onViewDetails={() => {
+            setPendingSheetOpen(false);
+            onTap();
+          }}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function durationPill(min: number): string {
