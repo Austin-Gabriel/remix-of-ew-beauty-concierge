@@ -501,6 +501,14 @@ function BlockedExplain({
 
 function UpNextCard({ booking, liveStatus }: { booking: Booking; liveStatus: LiveStatus }) {
   const { text, borderCol } = useHomeTheme();
+  const { proposalFor, tick } = useReschedule();
+  const proposal = proposalFor(booking.id);
+  const pendingReschedule =
+    proposal && proposal.status === "pending"
+      ? { timeLeftLabel: formatTimeLeft(proposal.expiresAt.getTime() - Date.now()) }
+      : null;
+  // tick consumed for re-render
+  void tick;
   const [earlyOpen, setEarlyOpen] = useState(false);
   const [earlyState, setEarlyState] = useState<
     "idle" | "asking" | "confirmed" | "client-prefers-original" | "expired"
