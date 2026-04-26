@@ -1447,7 +1447,8 @@ function BookingBlock({
   hero?: boolean;
   hourHeight: number;
 }) {
-  const top = pxFor(minutesIntoGrid(item.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(item.startsAt, gridStart), hourHeight);
   const h = Math.max(28, pxFor(item.durationMin, hourHeight));
   const tiny = h < 44;
   const initials = (item.clientFirst[0] ?? "").toUpperCase();
