@@ -197,26 +197,100 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
                 </div>
               </Field>
 
-              {/* END TIME */}
-              <Field label="End time">
-                <div className="flex items-center gap-2">
-                  <Stepper onClick={() => adjustEnd(-STEP)} ariaLabel="Earlier end">−</Stepper>
-                  <TimeBox value={fmt(endMin)} />
-                  <Stepper onClick={() => adjustEnd(STEP)} ariaLabel="Later end">+</Stepper>
+              {/* DURATION — service has a set length; surface it and let the
+                  pro deviate deliberately rather than free-form a range. */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between">
+                  <div
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: MIDNIGHT,
+                      opacity: 0.55,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Length
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (adjustLengthOpen && durationDelta !== 0) resetDuration();
+                      setAdjustLengthOpen((v) => !v);
+                    }}
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: ORANGE,
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {adjustLengthOpen ? "Use service length" : "Adjust length"}
+                  </button>
                 </div>
+
                 <div
+                  className="rounded-xl px-4 py-3"
                   style={{
-                    fontFamily: UI,
-                    fontSize: 12,
-                    color: MIDNIGHT,
-                    opacity: 0.55,
-                    marginTop: 6,
-                    fontVariantNumeric: "tabular-nums",
+                    backgroundColor: "rgba(6,28,39,0.04)",
+                    border: "1px solid rgba(6,28,39,0.12)",
                   }}
                 >
-                  {duration} min total
+                  <div className="flex items-baseline justify-between">
+                    <div
+                      style={{
+                        fontFamily: UI,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: MIDNIGHT,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {duration} min
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: UI,
+                        fontSize: 12,
+                        color: MIDNIGHT,
+                        opacity: 0.6,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      Ends {fmt(endMin)}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 11.5,
+                      marginTop: 4,
+                      color: durationDelta === 0 ? MIDNIGHT : ORANGE,
+                      opacity: durationDelta === 0 ? 0.55 : 1,
+                      fontWeight: durationDelta === 0 ? 500 : 600,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {durationDelta === 0
+                      ? `Service standard · ${serviceDurationMin} min`
+                      : `${durationDelta > 0 ? "+" : ""}${durationDelta} min vs ${serviceDurationMin}-min standard`}
+                  </div>
                 </div>
-              </Field>
+
+                {adjustLengthOpen ? (
+                  <div className="flex items-center gap-2">
+                    <Stepper onClick={() => adjustDuration(-STEP)} ariaLabel="Shorter">−</Stepper>
+                    <TimeBox value={`${duration} min`} />
+                    <Stepper onClick={() => adjustDuration(STEP)} ariaLabel="Longer">+</Stepper>
+                  </div>
+                ) : null}
+              </div>
 
               {/* REASON */}
               <Field label="Reason (optional)">
