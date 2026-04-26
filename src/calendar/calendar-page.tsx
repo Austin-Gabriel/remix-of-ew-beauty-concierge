@@ -995,6 +995,7 @@ function WeekView({
   onTapEmpty,
   onTapBlock,
   onTapBuffer,
+  onEditAvailability,
 }: {
   anchor: Date;
   onAnchorChange: (d: Date) => void;
@@ -1009,6 +1010,7 @@ function WeekView({
   onTapEmpty: (start: Date, presetMinutes?: number) => void;
   onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
+  onEditAvailability: () => void;
 }) {
   const wkStart = startOfWeek(anchor);
   const days = weekDays(wkStart);
