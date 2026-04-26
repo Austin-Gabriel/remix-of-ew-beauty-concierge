@@ -77,6 +77,22 @@ const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 22;
 const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 
+/** Local-date → "YYYY-MM-DD" so we can round-trip through search params
+ *  without timezone drift (toISOString would shift to UTC). */
+function toIsoDay(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function fromIsoDay(s: string): Date {
+  const [y, m, d] = s.split("-").map((n) => parseInt(n, 10));
+  const out = new Date();
+  out.setFullYear(y, (m || 1) - 1, d || 1);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
 /* =====================================================================
    ROOT
 ===================================================================== */
