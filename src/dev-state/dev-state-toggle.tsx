@@ -131,7 +131,7 @@ export function DevStateToggle() {
     setWeekDensity,
     setBlockedTime,
     setAvailability,
-    setRescheduleSim,
+    setRescheduleState,
     reset,
   } = useDevState();
   const reschedule = useReschedule();
@@ -158,21 +158,57 @@ export function DevStateToggle() {
     }
   }, [state.bookingSource, state.lifecycle, setLifecycle]);
 
-  // Reschedule sim bridge: fire the matching simulation on the latest pending
-  // proposal whenever the dev field flips away from "auto", then snap the
-  // field back to "auto" so the sim is a one-shot trigger.
+  // Reschedule render-state bridge. Translates the chosen state into
+  // proposals on the focus booking so every reschedule-aware surface
+  // (calendar grid, detail page, bookings list) re-renders in sync.
+  // Re-runs only when the chosen state changes — not on every reschedule
+  // tick — so we don't fight ourselves.
   useEffect(() => {
-    if (state.rescheduleSim === "auto") return;
-    const pending = reschedule.latestPending;
-    if (!pending) {
-      setRescheduleSim("auto");
+    const focus = ALL_BOOKINGS.find((b) => b.id === RESCHEDULE_FOCUS_ID);
+    if (!focus) return;
+
+    if (state.rescheduleState === "none") {
+      reschedule.clearAll();
       return;
     }
-    if (state.rescheduleSim === "accept") reschedule.simulateAccept(pending.bookingId);
-    else if (state.rescheduleSim === "decline") reschedule.simulateDecline(pending.bookingId);
-    else if (state.rescheduleSim === "expire") reschedule.simulateExpire(pending.bookingId);
-    setRescheduleSim("auto");
-  }, [state.rescheduleSim, reschedule, setRescheduleSim]);
+
+    // Build a "proposed" slot offset from the original by +2 hours so the
+    // ghost and the proposed block are clearly distinguishable on the grid.
+    const proposedStart = new Date(focus.startsAt);
+    proposedStart.setHours(proposedStart.getHours() + 2);
+    const baseInput = {
+      bookingId: focus.id,
+      clientLabel: focus.clientName,
+      originalStart: focus.startsAt,
+      originalDurationMin: focus.durationMin,
+      proposedStart,
+      proposedDurationMin: focus.durationMin,
+    };
+
+    if (state.rescheduleState === "pending-out") {
+      reschedule.clearAll();
+      reschedule.propose({ ...baseInput, direction: "outgoing" });
+    } else if (state.rescheduleState === "pending-in") {
+      reschedule.clearAll();
+      reschedule.propose({ ...baseInput, direction: "incoming" });
+    } else if (state.rescheduleState === "approved") {
+      reschedule.clearAll();
+      reschedule.propose({ ...baseInput, direction: "outgoing" });
+      // Resolve on next tick so the propose() commit lands first.
+      setTimeout(() => reschedule.simulateAccept(focus.id), 0);
+    } else if (state.rescheduleState === "declined") {
+      reschedule.clearAll();
+      reschedule.propose({ ...baseInput, direction: "outgoing" });
+      setTimeout(() => reschedule.simulateDecline(focus.id), 0);
+    } else if (state.rescheduleState === "expired") {
+      reschedule.clearAll();
+      reschedule.propose({ ...baseInput, direction: "outgoing" });
+      setTimeout(() => reschedule.simulateExpire(focus.id), 0);
+    }
+    // Intentionally only depend on the dev-state value — `reschedule` is a
+    // fresh object every render and would re-fire the effect endlessly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.rescheduleState]);
 
   if (!mounted || !enabled) return null;
 
