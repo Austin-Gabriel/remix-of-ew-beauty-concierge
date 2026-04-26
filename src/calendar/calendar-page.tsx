@@ -107,12 +107,14 @@ function CalendarPageInner() {
   // Sheets. blockSheet has two modes: "create" (start time + optional
   // pre-filled duration from a drag) or "edit" (existing block id).
   const [blockSheet, setBlockSheet] = useState<
-    | { mode: "create"; start: Date; presetMinutes?: number }
+    | { mode: "create"; start: Date; presetMinutes?: number; fromMore?: boolean }
     | { mode: "edit"; blockId: string }
     | null
   >(null);
   const [bufferSheet, setBufferSheet] = useState<TravelBuffer | null>(null);
-  const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
+  const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState<
+    { fromMore?: boolean } | false
+  >(false);
 
   const av = useMemo(
     () => resolveAvailability(dev.availability, dev.availabilityOverride),
