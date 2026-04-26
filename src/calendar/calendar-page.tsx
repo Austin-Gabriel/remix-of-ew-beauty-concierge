@@ -2988,9 +2988,67 @@ function BlockTimeSheet({
             </div>
           </div>
 
-          {/* DURATION — preset chips + stepper */}
+          {/* END TIME — stepper with inline picker */}
           <div className="flex flex-col gap-2">
-            <SectionLabel>Duration</SectionLabel>
+            <SectionLabel>End time</SectionLabel>
+            <div className="flex items-center gap-2">
+              <StepperButton onClick={() => adjustEnd(-STEP)} aria-label="Earlier end">
+                −
+              </StepperButton>
+              <label
+                className="relative flex flex-1 items-center justify-center rounded-xl"
+                style={{
+                  backgroundColor: "rgba(240,235,216,0.04)",
+                  border: "1px solid rgba(240,235,216,0.12)",
+                  height: 48,
+                  cursor: "pointer",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: UI,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: CREAM,
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {fmtTime(endTime)}
+                </span>
+                <input
+                  type="time"
+                  value={`${String(endTime.getHours()).padStart(2, "0")}:${String(endTime.getMinutes()).padStart(2, "0")}`}
+                  onChange={(e) => setEndFromPicker(e.target.value)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  style={{ colorScheme: "dark" }}
+                  aria-label="Pick end time"
+                />
+              </label>
+              <StepperButton onClick={() => adjustEnd(STEP)} aria-label="Later end">
+                +
+              </StepperButton>
+            </div>
+            {/* Passive duration readout */}
+            <div
+              style={{
+                fontFamily: UI,
+                fontSize: 12,
+                fontWeight: 500,
+                color: CREAM,
+                opacity: 0.55,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "-0.005em",
+                marginTop: 2,
+              }}
+            >
+              Duration: {durationMin} min
+            </div>
+          </div>
+
+          {/* DURATION PRESETS */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Quick presets</SectionLabel>
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((m) => {
                 const active = m === durationMin;
@@ -3031,35 +3089,6 @@ function BlockTimeSheet({
               >
                 Until end of day
               </button>
-            </div>
-            <div className="mt-1 flex items-center gap-2">
-              <StepperButton onClick={() => adjustDuration(-STEP)} aria-label="Less">
-                −
-              </StepperButton>
-              <div
-                className="flex flex-1 items-center justify-center rounded-xl"
-                style={{
-                  backgroundColor: "rgba(240,235,216,0.04)",
-                  border: "1px solid rgba(240,235,216,0.12)",
-                  height: 48,
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: UI,
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: CREAM,
-                    fontVariantNumeric: "tabular-nums",
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {durationMin} min
-                </span>
-              </div>
-              <StepperButton onClick={() => adjustDuration(STEP)} aria-label="More">
-                +
-              </StepperButton>
             </div>
           </div>
 
