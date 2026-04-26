@@ -386,6 +386,8 @@ export interface TimelineEntry {
   gapBefore?: string;
   /** Pending request props if this entry is awaiting pro approval. */
   pending?: BookingRowCardProps["pending"];
+  /** Pending reschedule pill props, if a proposal is in flight. */
+  pendingReschedule?: BookingRowCardProps["pendingReschedule"];
   /** Tap handler — routes to the booking detail page. */
   onOpen?: () => void;
 }
