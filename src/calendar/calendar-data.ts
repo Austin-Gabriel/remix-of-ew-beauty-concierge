@@ -11,6 +11,19 @@ import {
   type Booking,
   type CanonicalService,
 } from "@/data/mock-bookings";
+
+/**
+ * SINGLE SOURCE OF TRUTH for "what bookings exist on a given day" — used
+ * by both the Calendar surface and the Bookings list. Mirrors the
+ * Bookings/Upcoming filter (status === confirmed | pending). Completed
+ * & cancelled live in Bookings/History only and are not surfaced on the
+ * working calendar grid, so the two surfaces can never disagree.
+ */
+function activeCanonicalBookings(): Booking[] {
+  return ALL_BOOKINGS.filter(
+    (b) => b.status === "confirmed" || b.status === "pending",
+  );
+}
 import type {
   DevWeekDensity,
   DevBlockedTime,
@@ -344,7 +357,7 @@ function densityShape(density: DevWeekDensity): number[] {
  */
 export function realBookingsForWeek(weekStart: Date): CalendarBooking[] {
   const weekEnd = addDays(weekStart, 7);
-  return [...ALL_BOOKINGS, ...HISTORY_BOOKINGS]
+  return activeCanonicalBookings()
     .filter((b) => b.startsAt >= weekStart && b.startsAt < weekEnd)
     .map((b) => {
       const parts = b.clientName.trim().split(/\s+/);

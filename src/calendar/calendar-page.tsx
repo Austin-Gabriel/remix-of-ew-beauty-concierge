@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Bell,
   MoreHorizontal,
@@ -77,6 +77,22 @@ const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 22;
 const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 
+/** Local-date → "YYYY-MM-DD" so we can round-trip through search params
+ *  without timezone drift (toISOString would shift to UTC). */
+function toIsoDay(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function fromIsoDay(s: string): Date {
+  const [y, m, d] = s.split("-").map((n) => parseInt(n, 10));
+  const out = new Date();
+  out.setFullYear(y, (m || 1) - 1, d || 1);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
 /* =====================================================================
    ROOT
 ===================================================================== */
@@ -92,16 +108,21 @@ export function CalendarPage() {
 function CalendarPageInner() {
   const { state: dev } = useDevState();
   const navigate = useNavigate();
+  const search = useSearch({ from: "/calendar" });
 
-  // Calendar always lands on Week. Per spec: "every time the pro enters the
-  // Calendar tab, they land on Week, regardless of what view they were on
-  // previously." No persistence.
-  const [view, setView] = useState<View>("week");
-  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  // Calendar always lands on Week unless the pro is returning from a
+  // booking detail page, in which case we restore their previous view +
+  // selected day so back navigation feels seamless.
+  const [view, setView] = useState<View>(() => search.view ?? "week");
+  const [anchor, setAnchor] = useState<Date>(() =>
+    search.day ? fromIsoDay(search.day) : new Date(),
+  );
   // The "hero" day inside Week view. Defaults to today; tapping a Week day
   // header changes it without navigating away. Tapping a Month cell sets
   // this AND switches to Week.
-  const [heroDay, setHeroDay] = useState<Date>(() => new Date());
+  const [heroDay, setHeroDay] = useState<Date>(() =>
+    search.day ? fromIsoDay(search.day) : new Date(),
+  );
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Sheets. blockSheet has two modes: "create" (start time + optional
@@ -156,7 +177,15 @@ function CalendarPageInner() {
             onHeroDayChange={setHeroDay}
             onOpenBooking={(id) => {
               if (isRealBookingId(id)) {
-                navigate({ to: "/bookings/$id", params: { id } });
+                navigate({
+                  to: "/bookings/$id",
+                  params: { id },
+                  search: {
+                    from: "calendar",
+                    view,
+                    day: toIsoDay(heroDay),
+                  },
+                });
               }
             }}
             onTapEmpty={(start, presetMinutes) =>
@@ -1737,7 +1766,25 @@ function BlockBlock({
    Tap-and-drag = open Block sheet pre-filled with the swept duration.
 ===================================================================== */
 function UndoRedoPill() {
-  const { canUndo, canRedo, undo, redo } = useCalendarEdits();
+  const { canUndo, canRedo, undo, redo, version } = useCalendarEdits();
+  const [dismissed, setDismissed] = useState(false);
+
+  // Reset dismissal whenever a new edit lands.
+  useEffect(() => {
+    setDismissed(false);
+  }, [version]);
+
+  // Auto-dismiss after 5s of inactivity (no further edits, no taps on
+  // Undo / Redo, no manual close). Each new `version` resets the timer
+  // because this effect re-runs.
+  useEffect(() => {
+    if (dismissed) return;
+    if (!canUndo && !canRedo) return;
+    const t = window.setTimeout(() => setDismissed(true), 5000);
+    return () => window.clearTimeout(t);
+  }, [version, dismissed, canUndo, canRedo]);
+
+  if (dismissed) return null;
   if (!canUndo && !canRedo) return null;
   return (
     <div
@@ -1745,7 +1792,7 @@ function UndoRedoPill() {
       style={{ fontFamily: UI }}
     >
       <div
-        className="pointer-events-auto flex items-center gap-1 rounded-full border px-1 py-1 shadow-lg"
+        className="pointer-events-auto flex items-center gap-1 rounded-full border py-1 pl-1 pr-1 shadow-lg"
         style={{
           backgroundColor: "rgba(6,28,39,0.92)",
           borderColor: "rgba(240,235,216,0.18)",
@@ -1778,6 +1825,28 @@ function UndoRedoPill() {
           style={{ letterSpacing: "-0.005em" }}
         >
           Redo ↷
+        </button>
+        <div
+          aria-hidden
+          style={{
+            width: 1,
+            height: 16,
+            backgroundColor: "rgba(240,235,216,0.18)",
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss"
+          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
+          style={{
+            width: 24,
+            height: 24,
+            color: CREAM,
+            opacity: 0.7,
+          }}
+        >
+          <X size={12} strokeWidth={2.25} />
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { HomeShell, useHomeTheme, HOME_SANS, CardTheme } from "@/home/home-shell";
 import {
@@ -42,18 +42,35 @@ const PLATFORM_FEE_PCT = 0.1;
 
 export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/bookings/$id" });
   const { state: dev, setLifecycle } = useDevState();
   const booking = findBookingById(bookingId);
-  // Local optimistic status — accept/decline mutate this without leaving the
-  // page so the pro sees the result immediately. Defaults safely when the
-  // booking is missing; hooks must run unconditionally before any return.
   const [status, setStatus] = useState<BookingStatus>(
     booking?.status ?? "cancelled",
   );
 
-  // Live "now" — ticks every 30s so the start-button copy recomputes as
-  // real time advances. `new Date()` evaluated inline on every render is
-  // not enough, because nothing else triggers a re-render with time alone.
+  // Back navigation honors the referrer recorded when the pro tapped the
+  // booking. Calendar restores its view + selected day; Bookings restores
+  // its tab; Home returns to /home. Falls back to /bookings on the same
+  // tab the booking's status implies.
+  const goBack = () => {
+    if (search.from === "calendar") {
+      navigate({
+        to: "/calendar",
+        search: { view: search.view, day: search.day },
+      });
+      return;
+    }
+    if (search.from === "home") {
+      navigate({ to: "/home" });
+      return;
+    }
+    navigate({
+      to: "/bookings",
+      search: { tab: search.tab ?? tabForStatus(status) },
+    });
+  };
+
   const [currentTime, setCurrentTime] = useState<Date>(() => bookingButtonDemoCurrentTime());
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(bookingButtonDemoCurrentTime()), 30_000);
@@ -63,7 +80,7 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   if (!booking) {
     return (
       <HomeShell>
-        <DetailHeader title="Booking" onBack={() => navigate({ to: "/bookings" })} />
+        <DetailHeader title="Booking" onBack={goBack} />
         <div className="flex flex-1 items-center justify-center px-6">
           <p style={{ fontFamily: UI, fontSize: 14, color: MIDNIGHT, opacity: 0.6 }}>
             We couldn't find that booking.
@@ -83,9 +100,6 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
     setTimeout(() => navigate({ to: "/bookings", search: { tab: "upcoming" } }), 250);
   };
   const handleStartBooking = () => {
-    // Scheduled bookings skip Get Ready entirely — the pro confirms and
-    // heads straight into "On your way". Get Ready is reserved for the
-    // on-demand flow where prep time matters.
     setLifecycle("en-route");
     navigate({ to: "/bookings", search: { tab: "in-progress" } });
   };
@@ -94,10 +108,7 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
 
   return (
     <HomeShell>
-      <DetailHeader
-        title="Booking"
-        onBack={() => navigate({ to: "/bookings", search: { tab: tabForStatus(status) } })}
-      />
+      <DetailHeader title="Booking" onBack={goBack} />
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-32 pt-2">
         <HeroBlock booking={booking} status={status} />
