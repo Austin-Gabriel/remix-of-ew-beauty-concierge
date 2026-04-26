@@ -774,9 +774,12 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
 }
 
 function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const { isDark } = useHomeTheme();
   const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
   for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
+  const fullLine = isDark ? "rgba(240,235,216,0.08)" : "rgba(6,28,39,0.10)";
+  const halfLine = isDark ? "rgba(240,235,216,0.035)" : "rgba(6,28,39,0.05)";
   return (
     <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
@@ -788,7 +791,7 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
               style={{
                 top,
                 height: 1,
-                backgroundColor: "rgba(240,235,216,0.08)",
+                backgroundColor: fullLine,
               }}
             />
             {i < hours.length - 1 ? (
@@ -797,7 +800,7 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
                 style={{
                   top: top + hourHeight / 2,
                   height: 1,
-                  backgroundColor: "rgba(240,235,216,0.035)",
+                  backgroundColor: halfLine,
                 }}
               />
             ) : null}
