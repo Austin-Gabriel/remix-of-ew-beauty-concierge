@@ -79,6 +79,21 @@ export type DevAvailabilityOverride = Record<
   { startMin: number; endMin: number }[]
 >;
 
+/**
+ * Reschedule simulator. Drives the pending reschedule flow without needing
+ * a real client to respond. Setting anything other than "auto" forces the
+ * matching outcome on the next (or current) pending proposal:
+ *  - "auto"     → pending proposals run their TTL untouched
+ *  - "accept"   → simulate the client accepting (booking moves permanently)
+ *  - "decline"  → simulate the client declining (booking returns to original)
+ *  - "expire"   → simulate the proposal timing out (returns to original)
+ *
+ * This is the ONLY surface that fires those simulations — the formerly
+ * floating bubble is gone. Pros never see Sim. accept / decline / expire
+ * buttons in real UI.
+ */
+export type DevRescheduleSim = "auto" | "accept" | "decline" | "expire";
+
 export interface DevState {
   proState: DevProState;
   dataDensity: DevDataDensity;
@@ -91,6 +106,7 @@ export interface DevState {
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
   availabilityOverride: DevAvailabilityOverride | null;
+  rescheduleSim: DevRescheduleSim;
 }
 
 const DEFAULT_STATE: DevState = {
@@ -105,6 +121,7 @@ const DEFAULT_STATE: DevState = {
   blockedTime: "auto",
   availability: "auto",
   availabilityOverride: null,
+  rescheduleSim: "auto",
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
@@ -123,6 +140,7 @@ interface Ctx {
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
   setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
+  setRescheduleSim: (v: DevRescheduleSim) => void;
   reset: () => void;
 }
 
@@ -187,16 +205,20 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     (v: DevAvailabilityOverride | null) => setState((s) => ({ ...s, availabilityOverride: v })),
     [],
   );
+  const setRescheduleSim = useCallback(
+    (v: DevRescheduleSim) => setState((s) => ({ ...s, rescheduleSim: v })),
+    [],
+  );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
 
   const value = useMemo<Ctx>(
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride,
+      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -219,6 +241,7 @@ export function useDevState(): Ctx {
       setBlockedTime: () => {},
       setAvailability: () => {},
       setAvailabilityOverride: () => {},
+      setRescheduleSim: () => {},
       reset: () => {},
     };
   }

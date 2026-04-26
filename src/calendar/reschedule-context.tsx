@@ -34,12 +34,33 @@ export interface PendingReschedule {
   status: ProposalStatus;
 }
 
-const PROPOSAL_TTL_MS = 60_000;
+/**
+ * Default proposal lifetime. Real product copy speaks in hours ("Awaiting
+ * Maya · 23h left"), but for dev/demo realism we keep the timer short
+ * enough that you can watch it tick. Override with `ttlMs` when calling
+ * `propose()` if you want a longer-lived demo proposal.
+ */
+const PROPOSAL_TTL_MS = 24 * 60 * 60 * 1000; // 24h default
+
+/** Format ms remaining into the compact "23h left" / "45m left" / "30s left" form. */
+export function formatTimeLeft(ms: number): string {
+  if (ms <= 0) return "expired";
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s left`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m left`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h left`;
+  const days = Math.floor(hr / 24);
+  return `${days}d left`;
+}
 
 interface RescheduleCtx {
   proposals: PendingReschedule[];
   /** Current proposal for a booking, if any. Returns the most recent. */
   proposalFor: (bookingId: string) => PendingReschedule | null;
+  /** Latest pending proposal across all bookings, if any. */
+  latestPending: PendingReschedule | null;
   /** Create or replace a proposal. */
   propose: (input: {
     bookingId: string;
@@ -48,12 +69,15 @@ interface RescheduleCtx {
     originalDurationMin: number;
     proposedStart: Date;
     proposedDurationMin: number;
+    /** Optional override for the proposal lifetime (ms). */
+    ttlMs?: number;
   }) => void;
   /** Pro-side cancel before client responds. */
   cancel: (bookingId: string) => void;
   /** Dev/simulated client response. */
   simulateAccept: (bookingId: string) => void;
   simulateDecline: (bookingId: string) => void;
+  simulateExpire: (bookingId: string) => void;
   /** Permanent overrides applied after acceptance — keyed by bookingId. */
   overrides: Record<
     string,
@@ -107,10 +131,16 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
 
   const propose = useCallback<RescheduleCtx["propose"]>((input) => {
     const now = new Date();
+    const ttl = input.ttlMs ?? PROPOSAL_TTL_MS;
     const entry: PendingReschedule = {
-      ...input,
+      bookingId: input.bookingId,
+      clientLabel: input.clientLabel,
+      originalStart: input.originalStart,
+      originalDurationMin: input.originalDurationMin,
+      proposedStart: input.proposedStart,
+      proposedDurationMin: input.proposedDurationMin,
       createdAt: now,
-      expiresAt: new Date(now.getTime() + PROPOSAL_TTL_MS),
+      expiresAt: new Date(now.getTime() + ttl),
       status: "pending",
     };
     // Replace any prior pending for this booking; keep historical resolved ones.
@@ -164,24 +194,45 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const simulateExpire = useCallback((bookingId: string) => {
+    setProposals((cur) =>
+      cur.map((p) =>
+        p.bookingId === bookingId && p.status === "pending"
+          ? { ...p, status: "expired", expiresAt: new Date() }
+          : p,
+      ),
+    );
+  }, []);
+
+  const latestPending = useMemo<PendingReschedule | null>(() => {
+    for (let i = proposals.length - 1; i >= 0; i--) {
+      if (proposals[i].status === "pending") return proposals[i];
+    }
+    return null;
+  }, [proposals]);
+
   const value = useMemo<RescheduleCtx>(
     () => ({
       proposals,
       proposalFor,
+      latestPending,
       propose,
       cancel,
       simulateAccept,
       simulateDecline,
+      simulateExpire,
       overrides,
       tick,
     }),
     [
       proposals,
       proposalFor,
+      latestPending,
       propose,
       cancel,
       simulateAccept,
       simulateDecline,
+      simulateExpire,
       overrides,
       tick,
     ],
@@ -196,10 +247,12 @@ export function useReschedule(): RescheduleCtx {
     return {
       proposals: [],
       proposalFor: () => null,
+      latestPending: null,
       propose: () => {},
       cancel: () => {},
       simulateAccept: () => {},
       simulateDecline: () => {},
+      simulateExpire: () => {},
       overrides: {},
       tick: 0,
     };
