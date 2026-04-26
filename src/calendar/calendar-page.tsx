@@ -729,8 +729,9 @@ function StatStrip({
 
 function HourGutter({ hourHeight }: { hourHeight: number }) {
   const { text } = useHomeTheme();
+  const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
-  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
   return (
     <div
       className="relative"
@@ -741,7 +742,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
       }}
     >
       {hours.map((h) => {
-        const top = (h - GRID_START_HOUR) * hourHeight;
+        const top = (h - gridStart) * hourHeight;
         return (
           <span
             key={h}
@@ -768,12 +769,13 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
 }
 
 function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
-  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
   return (
     <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
-        const top = (h - GRID_START_HOUR) * hourHeight;
+        const top = (h - gridStart) * hourHeight;
         return (
           <div key={h}>
             <div
@@ -801,9 +803,14 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
   );
 }
 
-function minutesIntoGrid(d: Date): number {
-  const m = (d.getHours() - GRID_START_HOUR) * 60 + d.getMinutes();
+function minutesIntoGrid(d: Date, gridStartHour: number = GRID_START_HOUR): number {
+  const m = (d.getHours() - gridStartHour) * 60 + d.getMinutes();
   return Math.max(0, m);
+}
+
+function useMinutesIntoGrid(): (d: Date) => number {
+  const { gridStart } = useGridRange();
+  return (d: Date) => minutesIntoGrid(d, gridStart);
 }
 
 function pxFor(min: number, hourHeight: number): number {
