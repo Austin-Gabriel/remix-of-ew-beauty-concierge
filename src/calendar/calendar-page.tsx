@@ -156,7 +156,15 @@ function CalendarPageInner() {
             onHeroDayChange={setHeroDay}
             onOpenBooking={(id) => {
               if (isRealBookingId(id)) {
-                navigate({ to: "/bookings/$id", params: { id } });
+                navigate({
+                  to: "/bookings/$id",
+                  params: { id },
+                  search: {
+                    from: "calendar",
+                    view,
+                    day: toIsoDay(heroDay),
+                  },
+                });
               }
             }}
             onTapEmpty={(start, presetMinutes) =>
