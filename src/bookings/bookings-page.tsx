@@ -177,7 +177,7 @@ function UpcomingTab() {
   );
 
   const openDetail = (id: string) =>
-    navigate({ to: "/bookings/$id", params: { id } });
+    navigate({ to: "/bookings/$id", params: { id }, search: { from: "bookings", tab: "upcoming" } });
 
   const handleAccept = (id: string) =>
     setBookings((prev) =>
@@ -551,7 +551,7 @@ function HistoryTab() {
   }, []);
 
   const open = (id: string) =>
-    navigate({ to: "/bookings/$id", params: { id } });
+    navigate({ to: "/bookings/$id", params: { id }, search: { from: "bookings", tab: "history" } });
 
   return (
     <div className="flex flex-col pb-6">
