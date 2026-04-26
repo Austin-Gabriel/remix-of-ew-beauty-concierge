@@ -3279,7 +3279,11 @@ function AvailabilitySheet({
   };
 
   return (
-    <SheetShell title="Availability" onClose={onClose} onBack={onBack}>
+    <SheetShell
+      title="Availability"
+      onClose={() => guarded("close")}
+      onBack={onBack ? () => guarded("back") : undefined}
+    >
       <div
         style={{
           fontFamily: UI,
