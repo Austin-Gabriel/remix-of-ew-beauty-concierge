@@ -1709,7 +1709,8 @@ function BufferBlock({
   hourHeight: number;
   showInlineLabel: boolean;
 }) {
-  const top = pxFor(minutesIntoGrid(buffer.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(buffer.startsAt, gridStart), hourHeight);
   const h = Math.max(compact ? 8 : 14, pxFor(buffer.minutes, hourHeight));
   return (
     <button
