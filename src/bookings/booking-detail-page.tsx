@@ -46,10 +46,16 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   const navigate = useNavigate();
   const search = useSearch({ from: "/bookings/$id" });
   const { state: dev, setLifecycle } = useDevState();
+  const reschedule = useReschedule();
   const booking = findBookingById(bookingId);
   const [status, setStatus] = useState<BookingStatus>(
     booking?.status ?? "cancelled",
   );
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const proposal = booking ? reschedule.proposalFor(booking.id) : null;
+  const pendingProposal = proposal?.status === "pending" ? proposal : null;
+  // Subscribe to the reschedule tick so the countdown re-renders.
+  void reschedule.tick;
 
   // Back navigation honors the referrer recorded when the pro tapped the
   // booking. Calendar restores its view + selected day; Bookings restores
