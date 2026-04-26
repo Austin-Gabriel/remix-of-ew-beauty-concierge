@@ -926,18 +926,6 @@ function WeekView({
         view={view}
         onViewChange={onViewChange}
       />
-      <StatStrip
-        cols={[
-          {
-            value: dayStats.nextUpAt ? fmtTimeShort(dayStats.nextUpAt) : "—",
-            label: "Next up",
-            valueAccent: true,
-          },
-          { value: String(dayStats.count), label: "Bookings" },
-          { value: fmtUsd(dayStats.earnedUsd), label: "Expected" },
-        ]}
-      />
-
       <WeekStripAndDay
         days={days}
         today={today}
