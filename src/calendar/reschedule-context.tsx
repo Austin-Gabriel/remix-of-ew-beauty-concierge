@@ -148,6 +148,7 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
     const entry: PendingReschedule = {
       bookingId: input.bookingId,
       clientLabel: input.clientLabel,
+      direction: input.direction ?? "outgoing",
       originalStart: input.originalStart,
       originalDurationMin: input.originalDurationMin,
       proposedStart: input.proposedStart,
@@ -173,6 +174,11 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
           : p,
       ),
     );
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setProposals([]);
+    setOverrides({});
   }, []);
 
   const simulateAccept = useCallback((bookingId: string) => {
