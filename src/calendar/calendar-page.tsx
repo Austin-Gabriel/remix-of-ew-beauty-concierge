@@ -1664,7 +1664,8 @@ function abbrevService(s: string): string {
 }
 
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
-  const top = pxFor(minutesIntoGrid(slot.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(slot.startsAt, gridStart), hourHeight);
   const h = Math.max(
     28,
     pxFor((slot.endsAt.getTime() - slot.startsAt.getTime()) / 60_000, hourHeight),
