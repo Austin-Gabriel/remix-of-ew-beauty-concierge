@@ -70,7 +70,7 @@ interface RescheduleCtx {
   proposalFor: (bookingId: string) => PendingReschedule | null;
   /** Latest pending proposal across all bookings, if any. */
   latestPending: PendingReschedule | null;
-  /** Create or replace a proposal. */
+  /** Create or replace a proposal. Defaults to direction = "outgoing". */
   propose: (input: {
     bookingId: string;
     clientLabel: string;
@@ -78,12 +78,16 @@ interface RescheduleCtx {
     originalDurationMin: number;
     proposedStart: Date;
     proposedDurationMin: number;
+    /** Defaults to "outgoing". Pass "incoming" to model a client-initiated request. */
+    direction?: ProposalDirection;
     /** Optional override for the proposal lifetime (ms). */
     ttlMs?: number;
   }) => void;
-  /** Pro-side cancel before client responds. */
+  /** Cancel a pending proposal (pro-side cancel for outgoing, decline for incoming). */
   cancel: (bookingId: string) => void;
-  /** Dev/simulated client response. */
+  /** Clear ALL proposals (any direction, any status). Used by dev-state reset. */
+  clearAll: () => void;
+  /** Dev/simulated counterparty response. */
   simulateAccept: (bookingId: string) => void;
   simulateDecline: (bookingId: string) => void;
   simulateExpire: (bookingId: string) => void;
