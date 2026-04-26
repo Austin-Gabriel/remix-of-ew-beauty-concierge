@@ -808,13 +808,63 @@ function minutesIntoGrid(d: Date, gridStartHour: number = GRID_START_HOUR): numb
   return Math.max(0, m);
 }
 
-function useMinutesIntoGrid(): (d: Date) => number {
-  const { gridStart } = useGridRange();
-  return (d: Date) => minutesIntoGrid(d, gridStart);
-}
-
 function pxFor(min: number, hourHeight: number): number {
   return (min / 60) * hourHeight;
+}
+
+/**
+ * DayGridScroller: scroll wrapper sized to the dynamic per-day grid range.
+ * Renders a muted overlay across the buffer hours (one hour pad on each side
+ * of the pro's earliest/latest work range) so they read as "outside hours" —
+ * visually distinct from the warm work band and from manually-blocked time.
+ */
+function DayGridScroller({
+  dayAv,
+  children,
+}: {
+  dayAv: AvailabilityRange[];
+  children: React.ReactNode;
+}) {
+  const { gridStart, gridEnd, workStart, workEnd } = useGridRange();
+  void dayAv;
+  const totalHours = gridEnd - gridStart;
+  return (
+    <div
+      className="relative flex-1 overflow-y-auto"
+      style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+    >
+      <div
+        className="relative flex"
+        style={{ height: totalHours * HOUR_HEIGHT_DAY }}
+      >
+        {/* Outside-hours buffer tint — leading pad */}
+        {workStart != null ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 z-0"
+            style={{
+              top: 0,
+              height: (workStart - gridStart) * HOUR_HEIGHT_DAY,
+              backgroundColor: "rgba(6,28,39,0.45)",
+            }}
+          />
+        ) : null}
+        {/* Outside-hours buffer tint — trailing pad */}
+        {workEnd != null ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 z-0"
+            style={{
+              top: (workEnd - gridStart) * HOUR_HEIGHT_DAY,
+              height: (gridEnd - workEnd) * HOUR_HEIGHT_DAY,
+              backgroundColor: "rgba(6,28,39,0.45)",
+            }}
+          />
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
 }
 
 /* =====================================================================
