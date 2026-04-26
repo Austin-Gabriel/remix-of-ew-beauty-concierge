@@ -98,6 +98,9 @@ function BookingRowCardInner({ booking, isNext, cancelled, onSelect, pending, pe
         {pending ? (
           <PendingActions onAccept={pending.onAccept} onDecline={pending.onDecline} />
         ) : null}
+        {pendingReschedule ? (
+          <PendingReschedulePill timeLeftLabel={pendingReschedule.timeLeftLabel} />
+        ) : null}
       </Wrapper>
       {isNext ? <NextPill /> : null}
       {pending ? <PendingDot /> : null}
@@ -336,6 +339,36 @@ function PendingActions({
   );
 }
 
+/**
+ * Compact pill rendered inline beneath the row body when the booking has a
+ * pending reschedule proposal. Surfaces the same "Pending reschedule" intent
+ * across Bookings > Upcoming so the pro spots it without opening detail.
+ */
+function PendingReschedulePill({ timeLeftLabel }: { timeLeftLabel: string }) {
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 self-start rounded-full"
+      style={{
+        backgroundColor: BAGEL_SOFT,
+        color: "#7A2E0E",
+        padding: "4px 10px",
+        fontFamily: UI,
+        fontSize: 11.5,
+        fontWeight: 600,
+        letterSpacing: "-0.005em",
+        border: `1px solid ${BAGEL_BORDER}`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="rounded-full"
+        style={{ width: 6, height: 6, backgroundColor: BAGEL }}
+      />
+      Pending reschedule · {timeLeftLabel}
+    </div>
+  );
+}
+
 function shortLocality(loc: string): string {
   // "Fort Greene, Brooklyn" → "Fort Greene"
   return loc.split(",")[0].trim();
@@ -353,6 +386,8 @@ export interface TimelineEntry {
   gapBefore?: string;
   /** Pending request props if this entry is awaiting pro approval. */
   pending?: BookingRowCardProps["pending"];
+  /** Pending reschedule pill props, if a proposal is in flight. */
+  pendingReschedule?: BookingRowCardProps["pendingReschedule"];
   /** Tap handler — routes to the booking detail page. */
   onOpen?: () => void;
 }
@@ -397,6 +432,7 @@ function RailRow({ entry }: { entry: TimelineEntry }) {
           booking={entry.booking}
           isNext={entry.isNext}
           pending={entry.pending}
+          pendingReschedule={entry.pendingReschedule}
           onSelect={entry.onOpen}
         />
       </div>
