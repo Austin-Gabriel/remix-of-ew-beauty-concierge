@@ -432,6 +432,7 @@ function RailRow({ entry }: { entry: TimelineEntry }) {
           booking={entry.booking}
           isNext={entry.isNext}
           pending={entry.pending}
+          pendingReschedule={entry.pendingReschedule}
           onSelect={entry.onOpen}
         />
       </div>
