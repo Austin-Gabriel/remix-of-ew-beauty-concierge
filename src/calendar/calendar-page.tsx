@@ -1441,8 +1441,8 @@ function WeekStripAndDay({
                     fontFamily: UI,
                     fontSize: 10,
                     fontWeight: 600,
-                    color: CREAM,
-                    opacity: isHero ? 0.95 : offMute ? 0.28 : 0.5,
+                    color: themeText,
+                    opacity: isHero ? 0.95 : offMute ? 0.32 : 0.62,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                   }}
