@@ -2397,19 +2397,20 @@ function BlockTimeSheet({
   mode,
   density,
   onClose,
+  onBack,
 }: {
   mode:
-    | { mode: "create"; start: Date; presetMinutes?: number }
+    | { mode: "create"; start: Date; presetMinutes?: number; fromMore?: boolean }
     | { mode: "edit"; blockId: string };
   density: ReturnType<typeof useDevState>["state"]["weekDensity"];
   onClose: () => void;
+  onBack?: () => void;
 }) {
   const { addBlock, updateBlock, removeBlock, blocks } = useCalendarEdits();
   const editing = mode.mode === "edit"
     ? blocks.find((b) => b.id === mode.blockId) ?? null
     : null;
 
-  // Editor state. In create mode, derive defaults from the tap or drag.
   const initialStart =
     mode.mode === "edit" ? editing?.startsAt ?? new Date() : mode.start;
   const initialDuration =
@@ -2420,12 +2421,42 @@ function BlockTimeSheet({
   const [start, setStart] = useState<Date>(initialStart);
   const [durationMin, setDurationMin] = useState<number>(initialDuration);
   const [reason, setReason] = useState<string>(editing?.reason ?? "");
-  const [phase, setPhase] = useState<"choose" | "custom" | "saved" | "conflict">(
-    mode.mode === "edit" || (mode.mode === "create" && mode.presetMinutes)
-      ? "custom"
-      : "choose",
-  );
+  // pending: user tapped primary CTA but hasn't confirmed yet.
+  // confirmDelete: edit mode delete confirmation.
+  // conflict: overlap with a real booking.
+  const [phase, setPhase] = useState<
+    "edit" | "pendingCommit" | "confirmDelete" | "conflict"
+  >("edit");
   const [conflictName, setConflictName] = useState<string | null>(null);
+
+  // Stepper bounds.
+  const STEP = 5;
+  const MIN_DUR = 5;
+  const MAX_DUR = 24 * 60;
+  const PRESETS = [15, 30, 45, 60, 90, 120];
+
+  const adjustStart = (deltaMin: number) => {
+    const next = new Date(start.getTime() + deltaMin * 60_000);
+    setStart(next);
+  };
+
+  const setStartFromPicker = (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    const next = new Date(start);
+    next.setHours(h, m, 0, 0);
+    setStart(next);
+  };
+
+  const adjustDuration = (delta: number) => {
+    setDurationMin((d) => Math.max(MIN_DUR, Math.min(MAX_DUR, d + delta)));
+  };
+
+  const setUntilEod = () => {
+    const eod = new Date(start);
+    eod.setHours(GRID_END_HOUR, 0, 0, 0);
+    const dur = Math.max(MIN_DUR, Math.round((eod.getTime() - start.getTime()) / 60_000));
+    setDurationMin(dur);
+  };
 
   const conflictCheck = (s: Date, dur: number): string | null => {
     void density;
@@ -2439,237 +2470,352 @@ function BlockTimeSheet({
     return null;
   };
 
-  const persist = (s: Date, dur: number, r: string) => {
-    const end = new Date(s.getTime() + dur * 60_000);
-    if (mode.mode === "edit" && editing) {
-      updateBlock(editing.id, { startsAt: s, endsAt: end, reason: r || undefined });
-    } else {
-      addBlock({
-        id: `blk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        startsAt: s,
-        endsAt: end,
-        reason: r || undefined,
-      });
-    }
-  };
-
-  const tryBlock = (dur: number) => {
-    const c = conflictCheck(start, dur);
-    if (c) {
-      setConflictName(c);
-      setPhase("conflict");
-      return;
-    }
-    persist(start, dur, reason);
-    setDurationMin(dur);
-    setPhase("saved");
-  };
-
-  const saveCustom = () => {
+  const requestCommit = () => {
     const c = conflictCheck(start, durationMin);
     if (c) {
       setConflictName(c);
       setPhase("conflict");
       return;
     }
-    persist(start, durationMin, reason);
-    setPhase("saved");
+    setPhase("pendingCommit");
   };
 
-  const handleDelete = () => {
+  const doCommit = () => {
+    const end = new Date(start.getTime() + durationMin * 60_000);
+    if (mode.mode === "edit" && editing) {
+      updateBlock(editing.id, { startsAt: start, endsAt: end, reason: reason || undefined });
+    } else {
+      addBlock({
+        id: `blk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        startsAt: start,
+        endsAt: end,
+        reason: reason || undefined,
+      });
+    }
+    onClose();
+  };
+
+  const requestDelete = () => setPhase("confirmDelete");
+  const doDelete = () => {
     if (mode.mode === "edit" && editing) {
       removeBlock(editing.id);
-      onClose();
     }
+    onClose();
   };
 
-  const headerLabel =
-    mode.mode === "edit"
-      ? phase === "saved"
-        ? "Block updated"
-        : "Edit block"
-      : phase === "saved"
-        ? "Time blocked"
-        : "Block time";
+  const headerLabel = mode.mode === "edit" ? "Edit block" : "Block time";
+
+  const endTime = new Date(start.getTime() + durationMin * 60_000);
+  const rangeLabel = `${fmtTime(start)} – ${fmtTime(endTime)}`;
+  const confirmCopy =
+    mode.mode === "edit" ? `Update block to ${rangeLabel}?` : `Block ${rangeLabel}?`;
 
   return (
-    <SheetShell title={headerLabel} onClose={onClose}>
+    <SheetShell title={headerLabel} onClose={onClose} onBack={onBack}>
       <div
         style={{
           fontFamily: UI,
           fontSize: 12,
           color: CREAM,
           opacity: 0.6,
-          marginBottom: 12,
+          marginBottom: 14,
           letterSpacing: "-0.005em",
         }}
       >
-        Starting {fmtTime(start)} ·{" "}
         {start.toLocaleDateString(undefined, {
-          weekday: "short",
+          weekday: "long",
           month: "short",
           day: "numeric",
         })}
       </div>
 
-      {phase === "choose" ? (
-        <div className="flex flex-col gap-2">
-          <SheetButton onClick={() => tryBlock(30)}>Block 30 min</SheetButton>
-          <SheetButton onClick={() => tryBlock(60)}>Block 1 hour</SheetButton>
-          <SheetButton
-            onClick={() => {
-              const end = new Date(start);
-              end.setHours(GRID_END_HOUR, 0, 0, 0);
-              tryBlock(Math.max(30, (end.getTime() - start.getTime()) / 60_000));
-            }}
-          >
-            Block until end of day
-          </SheetButton>
-          <SheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
-        </div>
-      ) : null}
-
-      {phase === "custom" ? (
-        <div className="flex flex-col gap-3">
-          <label
-            style={{
-              fontFamily: UI,
-              fontSize: 11,
-              fontWeight: 600,
-              color: CREAM,
-              opacity: 0.65,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Start
-          </label>
-          <input
-            type="time"
-            value={`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`}
-            onChange={(e) => {
-              const [h, m] = e.target.value.split(":").map(Number);
-              const next = new Date(start);
-              next.setHours(h, m, 0, 0);
-              setStart(next);
-            }}
-            style={{
-              backgroundColor: "rgba(240,235,216,0.04)",
-              border: "1px solid rgba(240,235,216,0.12)",
-              borderRadius: 10,
-              color: CREAM,
-              fontFamily: UI,
-              fontSize: 14,
-              padding: "10px 12px",
-              outline: "none",
-              colorScheme: "dark",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          />
-          <label
-            style={{
-              fontFamily: UI,
-              fontSize: 11,
-              fontWeight: 600,
-              color: CREAM,
-              opacity: 0.65,
-              marginTop: 4,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Duration · {durationMin} min
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {[15, 30, 45, 60, 90, 120, 180].map((m) => {
-              const active = m === durationMin;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setDurationMin(m)}
-                  className="rounded-lg px-3 py-2 transition-opacity active:opacity-70"
+      {phase === "edit" || phase === "pendingCommit" || phase === "confirmDelete" ? (
+        <div className="flex flex-col gap-4">
+          {/* START TIME — stepper with inline picker */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Start time</SectionLabel>
+            <div className="flex items-center gap-2">
+              <StepperButton onClick={() => adjustStart(-STEP)} aria-label="Earlier">
+                −
+              </StepperButton>
+              <label
+                className="relative flex flex-1 items-center justify-center rounded-xl"
+                style={{
+                  backgroundColor: "rgba(240,235,216,0.04)",
+                  border: "1px solid rgba(240,235,216,0.12)",
+                  height: 48,
+                  cursor: "pointer",
+                }}
+              >
+                <span
                   style={{
-                    backgroundColor: active
-                      ? "rgba(255,130,63,0.18)"
-                      : "rgba(240,235,216,0.06)",
-                    border: `1px solid ${active ? "rgba(255,130,63,0.45)" : "rgba(240,235,216,0.12)"}`,
-                    color: active ? ORANGE : CREAM,
                     fontFamily: UI,
-                    fontSize: 13,
-                    fontWeight: 600,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: CREAM,
                     fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "-0.01em",
                   }}
                 >
-                  {m}m
-                </button>
-              );
-            })}
+                  {fmtTime(start)}
+                </span>
+                <input
+                  type="time"
+                  value={`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`}
+                  onChange={(e) => setStartFromPicker(e.target.value)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  style={{ colorScheme: "dark" }}
+                  aria-label="Pick start time"
+                />
+              </label>
+              <StepperButton onClick={() => adjustStart(STEP)} aria-label="Later">
+                +
+              </StepperButton>
+            </div>
           </div>
-          <label
-            style={{
-              fontFamily: UI,
-              fontSize: 11,
-              fontWeight: 600,
-              color: CREAM,
-              opacity: 0.65,
-              marginTop: 8,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Reason (optional)
-          </label>
-          <input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Personal, lunch, etc."
-            style={{
-              backgroundColor: "rgba(240,235,216,0.04)",
-              border: "1px solid rgba(240,235,216,0.12)",
-              borderRadius: 10,
-              color: CREAM,
-              fontFamily: UI,
-              fontSize: 14,
-              padding: "10px 12px",
-              outline: "none",
-            }}
-          />
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={saveCustom}
-              className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
-              style={{
-                backgroundColor: ORANGE,
-                color: MIDNIGHT,
-                fontFamily: UI,
-                fontSize: 14,
-                fontWeight: 700,
-                border: "none",
-              }}
-            >
-              {mode.mode === "edit" ? "Save changes" : "Block time"}
-            </button>
-            {mode.mode === "edit" ? (
+
+          {/* DURATION — preset chips + stepper */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Duration</SectionLabel>
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map((m) => {
+                const active = m === durationMin;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setDurationMin(m)}
+                    className="rounded-lg px-3 py-2 transition-opacity active:opacity-70"
+                    style={{
+                      backgroundColor: active
+                        ? "rgba(255,130,63,0.18)"
+                        : "rgba(240,235,216,0.06)",
+                      border: `1px solid ${active ? "rgba(255,130,63,0.45)" : "rgba(240,235,216,0.12)"}`,
+                      color: active ? ORANGE : CREAM,
+                      fontFamily: UI,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {m}m
+                  </button>
+                );
+              })}
               <button
                 type="button"
-                onClick={handleDelete}
-                className="rounded-xl px-4 py-3 transition-opacity active:opacity-70"
+                onClick={setUntilEod}
+                className="rounded-lg px-3 py-2 transition-opacity active:opacity-70"
                 style={{
                   backgroundColor: "rgba(240,235,216,0.06)",
-                  border: "1px solid rgba(240,235,216,0.18)",
+                  border: "1px solid rgba(240,235,216,0.12)",
                   color: CREAM,
                   fontFamily: UI,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 600,
                 }}
               >
-                Delete
+                Until end of day
               </button>
-            ) : null}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <StepperButton onClick={() => adjustDuration(-STEP)} aria-label="Less">
+                −
+              </StepperButton>
+              <div
+                className="flex flex-1 items-center justify-center rounded-xl"
+                style={{
+                  backgroundColor: "rgba(240,235,216,0.04)",
+                  border: "1px solid rgba(240,235,216,0.12)",
+                  height: 48,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: UI,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: CREAM,
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {durationMin} min
+                </span>
+              </div>
+              <StepperButton onClick={() => adjustDuration(STEP)} aria-label="More">
+                +
+              </StepperButton>
+            </div>
           </div>
+
+          {/* REASON */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Reason (optional)</SectionLabel>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Personal, lunch, etc."
+              style={{
+                backgroundColor: "rgba(240,235,216,0.04)",
+                border: "1px solid rgba(240,235,216,0.12)",
+                borderRadius: 10,
+                color: CREAM,
+                fontFamily: UI,
+                fontSize: 14,
+                padding: "12px 14px",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* INLINE CONFIRMATION */}
+          {phase === "pendingCommit" ? (
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                backgroundColor: "rgba(255,130,63,0.10)",
+                border: "1px solid rgba(255,130,63,0.40)",
+                color: CREAM,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                {confirmCopy}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPhase("edit")}
+                  className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: "rgba(240,235,216,0.06)",
+                    border: "1px solid rgba(240,235,216,0.18)",
+                    color: CREAM,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={doCommit}
+                  className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: ORANGE,
+                    color: MIDNIGHT,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: "none",
+                  }}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {phase === "confirmDelete" ? (
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                backgroundColor: "rgba(255,130,63,0.10)",
+                border: "1px solid rgba(255,130,63,0.40)",
+                color: CREAM,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                Delete this block?
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPhase("edit")}
+                  className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: "rgba(240,235,216,0.06)",
+                    border: "1px solid rgba(240,235,216,0.18)",
+                    color: CREAM,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={doDelete}
+                  className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: ORANGE,
+                    color: MIDNIGHT,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: "none",
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* PRIMARY ACTIONS */}
+          {phase === "edit" ? (
+            <div className="mt-1 flex gap-2">
+              <button
+                type="button"
+                onClick={requestCommit}
+                className="flex-1 rounded-xl py-3 transition-opacity active:opacity-70"
+                style={{
+                  backgroundColor: ORANGE,
+                  color: MIDNIGHT,
+                  fontFamily: UI,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  border: "none",
+                }}
+              >
+                {mode.mode === "edit" ? "Save changes" : "Block time"}
+              </button>
+              {mode.mode === "edit" ? (
+                <button
+                  type="button"
+                  onClick={requestDelete}
+                  className="rounded-xl px-4 py-3 transition-opacity active:opacity-70"
+                  style={{
+                    backgroundColor: "rgba(240,235,216,0.06)",
+                    border: "1px solid rgba(240,235,216,0.18)",
+                    color: CREAM,
+                    fontFamily: UI,
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -2689,26 +2835,62 @@ function BlockTimeSheet({
             Pick a shorter block or a different time.
           </div>
           <div className="mt-3 flex gap-2">
-            <SheetButton onClick={() => setPhase(mode.mode === "edit" ? "custom" : "choose")}>
-              Pick another
-            </SheetButton>
+            <SheetButton onClick={() => setPhase("edit")}>Pick another</SheetButton>
           </div>
         </div>
       ) : null}
-
-      {phase === "saved" ? (
-        <div
-          style={{
-            fontFamily: UI,
-            fontSize: 13,
-            color: CREAM,
-            opacity: 0.85,
-          }}
-        >
-          {mode.mode === "edit" ? "Changes saved." : "Time blocked."} The grid updated live.
-        </div>
-      ) : null}
     </SheetShell>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label
+      style={{
+        fontFamily: UI,
+        fontSize: 11,
+        fontWeight: 600,
+        color: CREAM,
+        opacity: 0.65,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+      }}
+    >
+      {children}
+    </label>
+  );
+}
+
+function StepperButton({
+  onClick,
+  children,
+  "aria-label": ariaLabel,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  "aria-label"?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="flex items-center justify-center rounded-xl transition-opacity active:opacity-60"
+      style={{
+        width: 48,
+        height: 48,
+        backgroundColor: "rgba(240,235,216,0.06)",
+        border: "1px solid rgba(240,235,216,0.14)",
+        color: CREAM,
+        fontFamily: UI,
+        fontSize: 22,
+        fontWeight: 600,
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
