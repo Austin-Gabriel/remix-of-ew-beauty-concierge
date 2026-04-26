@@ -1858,6 +1858,9 @@ function BookingBlock({
     }
     reschedule.propose({
       bookingId: item.id,
+      clientLabel:
+        item.clientFirst +
+        (item.clientLastInitial ? ` ${item.clientLastInitial}.` : ""),
       originalStart: effStart,
       originalDurationMin: effDur,
       proposedStart: newStart,
