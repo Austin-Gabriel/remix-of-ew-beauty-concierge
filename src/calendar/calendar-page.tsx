@@ -2010,6 +2010,45 @@ function BookingBlock({
         touchAction: armed || drag ? "none" : "auto",
       }}
     >
+      {/* Inline pending label — sits inside the card content beneath the
+          name/service so the booking still reads normally and the pending
+          state travels with it. */}
+      {isPending && proposal ? (
+        <div
+          className="absolute"
+          style={{
+            left: compact ? 4 : 6,
+            right: compact ? 4 : 6,
+            bottom: compact ? 3 : 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: "rgba(255,130,63,0.16)",
+            color: "#7A2E0E",
+            padding: compact ? "1px 5px" : "2px 6px",
+            borderRadius: 6,
+            fontFamily: UI,
+            fontSize: compact ? 9 : 10,
+            fontWeight: 700,
+            letterSpacing: "-0.005em",
+            zIndex: 2,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 9999,
+              backgroundColor: ORANGE,
+            }}
+          />
+          <span className="truncate">
+            Awaiting {proposal.clientLabel.split(" ")[0]} ·{" "}
+            {formatTimeLeft(proposal.expiresAt.getTime() - Date.now())}
+          </span>
+        </div>
+      ) : null}
       {armed ? (
         <>
           <div
