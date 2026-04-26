@@ -98,6 +98,9 @@ function BookingRowCardInner({ booking, isNext, cancelled, onSelect, pending, pe
         {pending ? (
           <PendingActions onAccept={pending.onAccept} onDecline={pending.onDecline} />
         ) : null}
+        {pendingReschedule ? (
+          <PendingReschedulePill timeLeftLabel={pendingReschedule.timeLeftLabel} />
+        ) : null}
       </Wrapper>
       {isNext ? <NextPill /> : null}
       {pending ? <PendingDot /> : null}
