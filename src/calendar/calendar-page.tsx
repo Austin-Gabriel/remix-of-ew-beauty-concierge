@@ -143,7 +143,9 @@ function fromIsoDay(s: string): Date {
 export function CalendarPage() {
   return (
     <CalendarEditsProvider>
-      <CalendarPageInner />
+      <RescheduleProvider>
+        <CalendarPageInner />
+      </RescheduleProvider>
     </CalendarEditsProvider>
   );
 }
