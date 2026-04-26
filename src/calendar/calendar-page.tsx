@@ -1378,7 +1378,7 @@ function WeekStripAndDay({
         ref={stripRef}
         className="px-3 pb-2 pt-1"
         style={{
-          borderBottom: "1px solid rgba(240,235,216,0.08)",
+          borderBottom: `1px solid ${themeBorder}`,
           touchAction: "pan-y",
         }}
         onPointerDown={(e) => {
