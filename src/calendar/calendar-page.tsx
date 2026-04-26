@@ -2594,7 +2594,7 @@ function BufferBlock({
         backgroundImage:
           "repeating-linear-gradient(135deg, rgba(255,130,63,0.14) 0 3px, transparent 3px 7px)",
         border: "1px dashed rgba(255,130,63,0.35)",
-        color: CREAM,
+        color: "#7A2E0E",
         padding: compact ? "0 4px" : "2px 6px",
         fontFamily: UI,
         fontSize: compact ? 8.5 : 10,
