@@ -2445,7 +2445,7 @@ function PendingActionSheet({
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
           <RescheduleSheetButton label="View details" onClick={onViewDetails} />
           <RescheduleSheetButton label={`Message ${firstName}`} onClick={onClose} />
-          <SheetButton
+          <RescheduleSheetButton
             label="Cancel request"
             onClick={onCancel}
             variant="danger"
