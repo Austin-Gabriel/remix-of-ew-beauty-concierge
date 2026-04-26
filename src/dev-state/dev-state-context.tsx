@@ -106,6 +106,7 @@ export interface DevState {
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
   availabilityOverride: DevAvailabilityOverride | null;
+  rescheduleSim: DevRescheduleSim;
 }
 
 const DEFAULT_STATE: DevState = {
@@ -120,6 +121,7 @@ const DEFAULT_STATE: DevState = {
   blockedTime: "auto",
   availability: "auto",
   availabilityOverride: null,
+  rescheduleSim: "auto",
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
@@ -138,6 +140,7 @@ interface Ctx {
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
   setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
+  setRescheduleSim: (v: DevRescheduleSim) => void;
   reset: () => void;
 }
 
