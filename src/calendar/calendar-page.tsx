@@ -23,6 +23,11 @@ import {
   useCalendarEdits,
 } from "@/calendar/calendar-edits-context";
 import {
+  RescheduleProvider,
+  useReschedule,
+  type PendingReschedule,
+} from "@/calendar/reschedule-context";
+import {
   addDays,
   densityPaddingForWeek,
   realBookingsForWeek,
