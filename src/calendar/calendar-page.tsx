@@ -1789,6 +1789,10 @@ function BookingBlock({
   const handleTap = () => {
     if (armed || drag) return;
     if (!tappedRef.current) return;
+    if (showProposed) {
+      setPendingSheetOpen(true);
+      return;
+    }
     onTap();
   };
 
