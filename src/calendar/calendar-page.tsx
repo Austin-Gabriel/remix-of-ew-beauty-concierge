@@ -1348,6 +1348,7 @@ function DayColumnInner({
   onTapBuffer: (b: TravelBuffer) => void;
   showInlineLabels: boolean;
 }) {
+  const { gridStart } = useGridRange();
   return (
     <div
       className="absolute inset-0"
@@ -1363,7 +1364,7 @@ function DayColumnInner({
       />
       {/* Inside-hours warmer band */}
       {availability.map((r, i) => {
-        const top = pxFor(r.startMin - GRID_START_HOUR * 60, hourHeight);
+        const top = pxFor(r.startMin - gridStart * 60, hourHeight);
         const h = pxFor(r.endMin - r.startMin, hourHeight);
         return (
           <div
