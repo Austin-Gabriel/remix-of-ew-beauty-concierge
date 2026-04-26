@@ -2862,9 +2862,11 @@ function BufferSheet({
 function AvailabilitySheet({
   availability,
   onClose,
+  onBack,
 }: {
   availability: AvailabilityWeek;
   onClose: () => void;
+  onBack?: () => void;
 }) {
   const { setAvailabilityOverride } = useDevState();
   const [local, setLocal] = useState<AvailabilityWeek>(() => normalize(availability));
@@ -2911,7 +2913,7 @@ function AvailabilitySheet({
   };
 
   return (
-    <SheetShell title="Availability" onClose={onClose}>
+    <SheetShell title="Availability" onClose={onClose} onBack={onBack}>
       <div
         style={{
           fontFamily: UI,
