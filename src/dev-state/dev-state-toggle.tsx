@@ -12,7 +12,9 @@ import {
   type DevWeekDensity,
   type DevBlockedTime,
   type DevAvailability,
+  type DevRescheduleSim,
 } from "@/dev-state/dev-state-context";
+import { useReschedule } from "@/calendar/reschedule-context";
 
 /**
  * Floating dev-only state toggle. Pinned bottom-right, above the bottom
