@@ -1399,7 +1399,8 @@ function DayColumnInner({
 }
 
 function NowLineLocal({ hourHeight }: { hourHeight: number }) {
-  const top = pxFor(minutesIntoGrid(new Date()), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(new Date(), gridStart), hourHeight);
   return (
     <div
       aria-hidden
