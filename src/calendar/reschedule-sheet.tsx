@@ -63,12 +63,12 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
     d.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
     return d;
   }, [date, startMin]);
+  const endMin = startMin + duration;
   const composedEnd = useMemo(() => {
     const d = new Date(date);
     d.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
     return d;
   }, [date, endMin]);
-  const duration = Math.max(MIN_DUR, endMin - startMin);
 
   const conflictName = useMemo(() => {
     const sMs = composedStart.getTime();
@@ -84,16 +84,15 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   }, [composedStart, duration, booking.id]);
 
   const adjustStart = (delta: number) => {
-    setStartMin((s) => {
-      const next = Math.max(0, Math.min(24 * 60 - MIN_DUR, s + delta));
-      // Push end forward to keep duration ≥ MIN_DUR.
-      setEndMin((e) => (e <= next ? next + MIN_DUR : e));
-      return next;
-    });
+    setStartMin((s) =>
+      Math.max(0, Math.min(24 * 60 - MIN_DUR, s + delta)),
+    );
   };
-  const adjustEnd = (delta: number) => {
-    setEndMin((e) => Math.max(startMin + MIN_DUR, Math.min(24 * 60, e + delta)));
+  const adjustDuration = (delta: number) => {
+    setDuration((d) => Math.max(MIN_DUR, Math.min(24 * 60 - startMin, d + delta)));
   };
+  const resetDuration = () => setDuration(serviceDurationMin);
+  const durationDelta = duration - serviceDurationMin;
 
   const handleSubmit = () => setPhase("confirm");
   const handleConfirm = () => {
