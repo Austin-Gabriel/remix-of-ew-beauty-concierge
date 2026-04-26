@@ -131,10 +131,16 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
 
   const propose = useCallback<RescheduleCtx["propose"]>((input) => {
     const now = new Date();
+    const ttl = input.ttlMs ?? PROPOSAL_TTL_MS;
     const entry: PendingReschedule = {
-      ...input,
+      bookingId: input.bookingId,
+      clientLabel: input.clientLabel,
+      originalStart: input.originalStart,
+      originalDurationMin: input.originalDurationMin,
+      proposedStart: input.proposedStart,
+      proposedDurationMin: input.proposedDurationMin,
       createdAt: now,
-      expiresAt: new Date(now.getTime() + PROPOSAL_TTL_MS),
+      expiresAt: new Date(now.getTime() + ttl),
       status: "pending",
     };
     // Replace any prior pending for this booking; keep historical resolved ones.
@@ -188,24 +194,45 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const simulateExpire = useCallback((bookingId: string) => {
+    setProposals((cur) =>
+      cur.map((p) =>
+        p.bookingId === bookingId && p.status === "pending"
+          ? { ...p, status: "expired", expiresAt: new Date() }
+          : p,
+      ),
+    );
+  }, []);
+
+  const latestPending = useMemo<PendingReschedule | null>(() => {
+    for (let i = proposals.length - 1; i >= 0; i--) {
+      if (proposals[i].status === "pending") return proposals[i];
+    }
+    return null;
+  }, [proposals]);
+
   const value = useMemo<RescheduleCtx>(
     () => ({
       proposals,
       proposalFor,
+      latestPending,
       propose,
       cancel,
       simulateAccept,
       simulateDecline,
+      simulateExpire,
       overrides,
       tick,
     }),
     [
       proposals,
       proposalFor,
+      latestPending,
       propose,
       cancel,
       simulateAccept,
       simulateDecline,
+      simulateExpire,
       overrides,
       tick,
     ],
@@ -220,10 +247,12 @@ export function useReschedule(): RescheduleCtx {
     return {
       proposals: [],
       proposalFor: () => null,
+      latestPending: null,
       propose: () => {},
       cancel: () => {},
       simulateAccept: () => {},
       simulateDecline: () => {},
+      simulateExpire: () => {},
       overrides: {},
       tick: 0,
     };
