@@ -368,6 +368,8 @@ function PendingReschedulePill({ timeLeftLabel }: { timeLeftLabel: string }) {
     </div>
   );
 }
+
+function shortLocality(loc: string): string {
   // "Fort Greene, Brooklyn" → "Fort Greene"
   return loc.split(",")[0].trim();
 }
