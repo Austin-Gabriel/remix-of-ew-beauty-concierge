@@ -1075,6 +1075,7 @@ function WeekView({
         onTapEmpty={onTapEmpty}
         onTapBlock={onTapBlock}
         onTapBuffer={onTapBuffer}
+        onEditAvailability={onEditAvailability}
       />
     </div>
   );
