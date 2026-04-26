@@ -271,6 +271,7 @@ export function useReschedule(): RescheduleCtx {
       latestPending: null,
       propose: () => {},
       cancel: () => {},
+      clearAll: () => {},
       simulateAccept: () => {},
       simulateDecline: () => {},
       simulateExpire: () => {},
