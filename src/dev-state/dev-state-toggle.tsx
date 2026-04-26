@@ -12,9 +12,10 @@ import {
   type DevWeekDensity,
   type DevBlockedTime,
   type DevAvailability,
-  type DevRescheduleSim,
+  type DevRescheduleState,
 } from "@/dev-state/dev-state-context";
 import { useReschedule } from "@/calendar/reschedule-context";
+import { ALL_BOOKINGS } from "@/data/mock-bookings";
 
 /**
  * Floating dev-only state toggle. Pinned bottom-right, above the bottom
@@ -100,12 +101,21 @@ const AVAILABILITIES: { value: DevAvailability; label: string; hint: string }[] 
   { value: "limited", label: "Limited", hint: "3 days only" },
 ];
 
-const RESCHEDULE_SIMS: { value: DevRescheduleSim; label: string; hint: string }[] = [
-  { value: "auto", label: "Auto", hint: "Pending proposals run their TTL" },
-  { value: "accept", label: "Sim. accept", hint: "Client accepts the proposal" },
-  { value: "decline", label: "Sim. decline", hint: "Client declines — booking reverts" },
-  { value: "expire", label: "Sim. expire", hint: "Proposal times out" },
+/**
+ * Reschedule render states. The bridge effect below translates the
+ * selection into proposals on the focus booking (RESCHEDULE_FOCUS_ID).
+ */
+const RESCHEDULE_STATES: { value: DevRescheduleState; label: string; hint: string }[] = [
+  { value: "none", label: "None", hint: "Confirmed booking, no pending state" },
+  { value: "pending-out", label: "Pending out", hint: "Pro proposed; client must respond" },
+  { value: "pending-in", label: "Pending in", hint: "Client proposed; pro must respond" },
+  { value: "approved", label: "Approved", hint: "Counterparty accepted" },
+  { value: "declined", label: "Declined", hint: "Counterparty declined" },
+  { value: "expired", label: "Expired", hint: "Proposal timed out" },
 ];
+
+/** Stable focus booking for reschedule simulation — Maya, today, confirmed. */
+const RESCHEDULE_FOCUS_ID = "b1";
 
 export function DevStateToggle() {
   const {
