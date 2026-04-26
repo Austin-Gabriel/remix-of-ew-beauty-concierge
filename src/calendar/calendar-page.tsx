@@ -733,7 +733,7 @@ function StatStrip({
 ===================================================================== */
 
 function HourGutter({ hourHeight }: { hourHeight: number }) {
-  const { text } = useHomeTheme();
+  const { text, isDark } = useHomeTheme();
   const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
   for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
@@ -743,7 +743,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
       style={{
         width: GUTTER_W,
         flexShrink: 0,
-        borderRight: "1px solid rgba(240,235,216,0.06)",
+        borderRight: `1px solid ${isDark ? "rgba(240,235,216,0.08)" : "rgba(6,28,39,0.10)"}`,
       }}
     >
       {hours.map((h) => {
@@ -759,7 +759,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
               fontSize: 10,
               fontWeight: 500,
               color: text,
-              opacity: 0.5,
+              opacity: isDark ? 0.5 : 0.6,
               textAlign: "right",
               letterSpacing: "0.02em",
               fontVariantNumeric: "tabular-nums",
@@ -774,9 +774,12 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
 }
 
 function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const { isDark } = useHomeTheme();
   const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
   for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
+  const fullLine = isDark ? "rgba(240,235,216,0.08)" : "rgba(6,28,39,0.10)";
+  const halfLine = isDark ? "rgba(240,235,216,0.035)" : "rgba(6,28,39,0.05)";
   return (
     <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
@@ -788,7 +791,7 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
               style={{
                 top,
                 height: 1,
-                backgroundColor: "rgba(240,235,216,0.08)",
+                backgroundColor: fullLine,
               }}
             />
             {i < hours.length - 1 ? (
@@ -797,7 +800,7 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
                 style={{
                   top: top + hourHeight / 2,
                   height: 1,
-                  backgroundColor: "rgba(240,235,216,0.035)",
+                  backgroundColor: halfLine,
                 }}
               />
             ) : null}
@@ -1337,6 +1340,7 @@ function WeekStripAndDay({
   onEditAvailability: () => void;
 }) {
   void blockedPreset;
+  const { text: themeText, borderCol: themeBorder } = useHomeTheme();
   const dayAv = availability[heroDay.getDay()] ?? [];
   const dayItems = useMemo(
     () => items.filter((b) => isSameDay(b.startsAt, heroDay)),
@@ -1377,7 +1381,7 @@ function WeekStripAndDay({
         ref={stripRef}
         className="px-3 pb-2 pt-1"
         style={{
-          borderBottom: "1px solid rgba(240,235,216,0.08)",
+          borderBottom: `1px solid ${themeBorder}`,
           touchAction: "pan-y",
         }}
         onPointerDown={(e) => {
@@ -1418,7 +1422,10 @@ function WeekStripAndDay({
             const circleBg = isHero ? ORANGE : "transparent";
             const circleBorder =
               isToday && !isHero ? `1.5px solid ${ORANGE}` : "1px solid transparent";
-            const circleFg = isHero ? MIDNIGHT : CREAM;
+            // Selected day chip uses navy on orange (legible in both modes).
+            // Non-selected uses the active theme's body text color so days
+            // stay visible whether the page is dark or light.
+            const circleFg = isHero ? MIDNIGHT : themeText;
             // Day off: mute both the initial and the date number when the
             // chip isn't actively selected. Selected day-off still reads
             // strong so the pro sees it's their current view.
@@ -1437,8 +1444,8 @@ function WeekStripAndDay({
                     fontFamily: UI,
                     fontSize: 10,
                     fontWeight: 600,
-                    color: CREAM,
-                    opacity: isHero ? 0.95 : offMute ? 0.28 : 0.5,
+                    color: themeText,
+                    opacity: isHero ? 0.95 : offMute ? 0.32 : 0.62,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                   }}
@@ -1731,6 +1738,7 @@ function BookingBlock({
   hourHeight: number;
 }) {
   const { gridStart } = useGridRange();
+  const { isDark } = useHomeTheme();
   const reschedule = useReschedule();
   const proposal = reschedule.proposalFor(item.id);
   const override = reschedule.overrides[item.id];
@@ -1997,12 +2005,16 @@ function BookingBlock({
           ? `0 0 0 2px ${ORANGE}`
           : isNow
             ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
-            : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
+            : isDark
+              ? "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)"
+              : "0 1px 2px rgba(6,28,39,0.10), 0 6px 16px -10px rgba(6,28,39,0.32)",
         border: isPending
           ? "1px dashed rgba(255,130,63,0.85)"
           : isNow
             ? "none"
-            : "1px solid rgba(6,28,39,0.10)",
+            : isDark
+              ? "1px solid rgba(6,28,39,0.10)"
+              : "1px solid rgba(6,28,39,0.18)",
         opacity: desaturate ? 0.7 : isPending ? 0.85 : 1,
         outline: armed && !drag ? `2px solid ${ORANGE}` : "none",
         outlineOffset: armed && !drag ? 2 : 0,
@@ -2512,6 +2524,7 @@ function abbrevService(s: string): string {
 
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
   const { gridStart } = useGridRange();
+  const { isDark, text } = useHomeTheme();
   const top = pxFor(minutesIntoGrid(slot.startsAt, gridStart), hourHeight);
   const h = Math.max(
     28,
@@ -2527,10 +2540,10 @@ function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) 
         left: 2,
         right: 2,
         borderRadius: 10,
-        border: "1.5px dashed rgba(240,235,216,0.18)",
+        border: `1.5px dashed ${isDark ? "rgba(240,235,216,0.18)" : "rgba(6,28,39,0.22)"}`,
         backgroundColor: "transparent",
-        color: CREAM,
-        opacity: 0.55,
+        color: text,
+        opacity: isDark ? 0.55 : 0.7,
         fontFamily: UI,
         fontSize: 12,
         fontWeight: 500,
@@ -2581,7 +2594,7 @@ function BufferBlock({
         backgroundImage:
           "repeating-linear-gradient(135deg, rgba(255,130,63,0.14) 0 3px, transparent 3px 7px)",
         border: "1px dashed rgba(255,130,63,0.35)",
-        color: CREAM,
+        color: "#7A2E0E",
         padding: compact ? "0 4px" : "2px 6px",
         fontFamily: UI,
         fontSize: compact ? 8.5 : 10,
