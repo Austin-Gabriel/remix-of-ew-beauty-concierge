@@ -2005,12 +2005,16 @@ function BookingBlock({
           ? `0 0 0 2px ${ORANGE}`
           : isNow
             ? `0 0 0 2px ${ORANGE}, 0 0 0 4px rgba(255,130,63,0.25)`
-            : "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)",
+            : isDark
+              ? "0 1px 2px rgba(6,28,39,0.08), 0 4px 12px -8px rgba(6,28,39,0.20)"
+              : "0 1px 2px rgba(6,28,39,0.10), 0 6px 16px -10px rgba(6,28,39,0.32)",
         border: isPending
           ? "1px dashed rgba(255,130,63,0.85)"
           : isNow
             ? "none"
-            : "1px solid rgba(6,28,39,0.10)",
+            : isDark
+              ? "1px solid rgba(6,28,39,0.10)"
+              : "1px solid rgba(6,28,39,0.18)",
         opacity: desaturate ? 0.7 : isPending ? 0.85 : 1,
         outline: armed && !drag ? `2px solid ${ORANGE}` : "none",
         outlineOffset: armed && !drag ? 2 : 0,
