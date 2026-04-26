@@ -3418,21 +3418,131 @@ function AvailabilitySheet({
           );
         })}
       </div>
+      <div className="mt-4 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty}
+          className="rounded-full px-4 transition-opacity active:opacity-80 disabled:cursor-not-allowed"
+          style={{
+            height: 48,
+            backgroundColor: dirty ? ORANGE : "rgba(240,235,216,0.06)",
+            color: dirty ? MIDNIGHT : CREAM,
+            opacity: dirty ? 1 : 0.45,
+            fontFamily: UI,
+            fontSize: 14,
+            fontWeight: 700,
+            border: dirty ? "none" : "1px solid rgba(240,235,216,0.10)",
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {dirty ? "Save changes" : "No changes"}
+        </button>
+        {savedAt != null && !dirty ? (
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 11,
+              color: ORANGE,
+              opacity: 0.95,
+              textAlign: "center",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            ✓ Saved
+          </div>
+        ) : null}
+      </div>
+
+      {discardPrompt ? (
+        <DiscardPrompt
+          onCancel={() => setDiscardPrompt(null)}
+          onConfirm={() => {
+            const intent = discardPrompt;
+            setDiscardPrompt(null);
+            // Roll back local edits before navigating away.
+            setLocal(initial);
+            if (intent === "close") onClose();
+            else onBack?.();
+          }}
+        />
+      ) : null}
+    </SheetShell>
+  );
+}
+
+function DiscardPrompt({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center"
+      style={{ fontFamily: UI }}
+    >
+      <button
+        type="button"
+        aria-label="Cancel"
+        onClick={onCancel}
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+      />
       <div
+        role="dialog"
+        aria-label="Discard changes"
+        className="relative m-4 w-full max-w-sm rounded-2xl p-5"
         style={{
-          fontFamily: UI,
-          fontSize: 11,
+          backgroundColor: NAVY_PANEL,
+          border: "1px solid rgba(240,235,216,0.10)",
           color: CREAM,
-          opacity: 0.5,
-          textAlign: "center",
-          marginTop: 14,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
         }}
       >
-        Saved live
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+          Discard changes?
+        </div>
+        <div style={{ fontSize: 13, opacity: 0.65, marginBottom: 14 }}>
+          You have unsaved availability edits. Leave without saving?
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-full transition-opacity active:opacity-70"
+            style={{
+              height: 44,
+              backgroundColor: "rgba(240,235,216,0.06)",
+              border: "1px solid rgba(240,235,216,0.12)",
+              color: CREAM,
+              fontFamily: UI,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-full transition-opacity active:opacity-70"
+            style={{
+              height: 44,
+              backgroundColor: ORANGE,
+              color: MIDNIGHT,
+              border: "none",
+              fontFamily: UI,
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Discard
+          </button>
+        </div>
       </div>
-    </SheetShell>
+    </div>
   );
 }
 
