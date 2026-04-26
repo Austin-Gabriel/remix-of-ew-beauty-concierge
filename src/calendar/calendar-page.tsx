@@ -2524,6 +2524,7 @@ function abbrevService(s: string): string {
 
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
   const { gridStart } = useGridRange();
+  const { isDark, text } = useHomeTheme();
   const top = pxFor(minutesIntoGrid(slot.startsAt, gridStart), hourHeight);
   const h = Math.max(
     28,
@@ -2539,10 +2540,10 @@ function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) 
         left: 2,
         right: 2,
         borderRadius: 10,
-        border: "1.5px dashed rgba(240,235,216,0.18)",
+        border: `1.5px dashed ${isDark ? "rgba(240,235,216,0.18)" : "rgba(6,28,39,0.22)"}`,
         backgroundColor: "transparent",
-        color: CREAM,
-        opacity: 0.55,
+        color: text,
+        opacity: isDark ? 0.55 : 0.7,
         fontFamily: UI,
         fontSize: 12,
         fontWeight: 500,
