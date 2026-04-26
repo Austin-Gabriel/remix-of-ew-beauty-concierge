@@ -59,6 +59,8 @@ interface RescheduleCtx {
   proposals: PendingReschedule[];
   /** Current proposal for a booking, if any. Returns the most recent. */
   proposalFor: (bookingId: string) => PendingReschedule | null;
+  /** Latest pending proposal across all bookings, if any. */
+  latestPending: PendingReschedule | null;
   /** Create or replace a proposal. */
   propose: (input: {
     bookingId: string;
@@ -67,12 +69,15 @@ interface RescheduleCtx {
     originalDurationMin: number;
     proposedStart: Date;
     proposedDurationMin: number;
+    /** Optional override for the proposal lifetime (ms). */
+    ttlMs?: number;
   }) => void;
   /** Pro-side cancel before client responds. */
   cancel: (bookingId: string) => void;
   /** Dev/simulated client response. */
   simulateAccept: (bookingId: string) => void;
   simulateDecline: (bookingId: string) => void;
+  simulateExpire: (bookingId: string) => void;
   /** Permanent overrides applied after acceptance — keyed by bookingId. */
   overrides: Record<
     string,
