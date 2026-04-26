@@ -26,6 +26,8 @@ import {
   getBookingButtonState,
   type StartBookingButtonState,
 } from "@/lib/booking-button-state";
+import { useReschedule, formatTimeLeft } from "@/calendar/reschedule-context";
+import { RescheduleSheet } from "@/calendar/reschedule-sheet";
 
 /**
  * Canonical booking detail page. Reads from the canonical booking registry
