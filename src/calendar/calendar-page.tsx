@@ -1340,7 +1340,7 @@ function WeekStripAndDay({
   onEditAvailability: () => void;
 }) {
   void blockedPreset;
-  const { text: themeText, borderCol: themeBorder, isDark } = useHomeTheme();
+  const { text: themeText, borderCol: themeBorder } = useHomeTheme();
   const dayAv = availability[heroDay.getDay()] ?? [];
   const dayItems = useMemo(
     () => items.filter((b) => isSameDay(b.startsAt, heroDay)),
