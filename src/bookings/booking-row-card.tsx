@@ -339,7 +339,35 @@ function PendingActions({
   );
 }
 
-function shortLocality(loc: string): string {
+/**
+ * Compact pill rendered inline beneath the row body when the booking has a
+ * pending reschedule proposal. Surfaces the same "Pending reschedule" intent
+ * across Bookings > Upcoming so the pro spots it without opening detail.
+ */
+function PendingReschedulePill({ timeLeftLabel }: { timeLeftLabel: string }) {
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 self-start rounded-full"
+      style={{
+        backgroundColor: BAGEL_SOFT,
+        color: "#7A2E0E",
+        padding: "4px 10px",
+        fontFamily: UI,
+        fontSize: 11.5,
+        fontWeight: 600,
+        letterSpacing: "-0.005em",
+        border: `1px solid ${BAGEL_BORDER}`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="rounded-full"
+        style={{ width: 6, height: 6, backgroundColor: BAGEL }}
+      />
+      Pending reschedule · {timeLeftLabel}
+    </div>
+  );
+}
   // "Fort Greene, Brooklyn" → "Fort Greene"
   return loc.split(",")[0].trim();
 }
