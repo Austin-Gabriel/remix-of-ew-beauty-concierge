@@ -11,6 +11,7 @@ import {
   type PendingOnDemand,
   formatUsd,
 } from "@/data/mock-data";
+import { useReschedule, formatTimeLeft } from "@/calendar/reschedule-context";
 
 /**
  * Native-mobile working surface for a beauty pro who travels to clients.
