@@ -37,6 +37,10 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   const override = reschedule.overrides[booking.id];
   const startsAt = override?.startsAt ?? booking.startsAt;
   const durationMin = override?.durationMin ?? booking.durationMin;
+  // The service's set duration — the source of truth for how long this
+  // service "should" take. Pros can deviate, but we surface the delta so
+  // it's a deliberate choice, not a side-effect of the time pickers.
+  const serviceDurationMin = booking.durationMin;
 
   const [date, setDate] = useState<Date>(() => {
     const d = new Date(startsAt);
@@ -46,8 +50,9 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   const [startMin, setStartMin] = useState<number>(
     startsAt.getHours() * 60 + startsAt.getMinutes(),
   );
-  const [endMin, setEndMin] = useState<number>(
-    startsAt.getHours() * 60 + startsAt.getMinutes() + durationMin,
+  const [duration, setDuration] = useState<number>(durationMin);
+  const [adjustLengthOpen, setAdjustLengthOpen] = useState<boolean>(
+    durationMin !== serviceDurationMin,
   );
   const [reason, setReason] = useState<string>("");
   const [phase, setPhase] = useState<"edit" | "confirm">("edit");
@@ -58,12 +63,12 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
     d.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
     return d;
   }, [date, startMin]);
+  const endMin = startMin + duration;
   const composedEnd = useMemo(() => {
     const d = new Date(date);
     d.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
     return d;
   }, [date, endMin]);
-  const duration = Math.max(MIN_DUR, endMin - startMin);
 
   const conflictName = useMemo(() => {
     const sMs = composedStart.getTime();
@@ -79,16 +84,15 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   }, [composedStart, duration, booking.id]);
 
   const adjustStart = (delta: number) => {
-    setStartMin((s) => {
-      const next = Math.max(0, Math.min(24 * 60 - MIN_DUR, s + delta));
-      // Push end forward to keep duration ≥ MIN_DUR.
-      setEndMin((e) => (e <= next ? next + MIN_DUR : e));
-      return next;
-    });
+    setStartMin((s) =>
+      Math.max(0, Math.min(24 * 60 - MIN_DUR, s + delta)),
+    );
   };
-  const adjustEnd = (delta: number) => {
-    setEndMin((e) => Math.max(startMin + MIN_DUR, Math.min(24 * 60, e + delta)));
+  const adjustDuration = (delta: number) => {
+    setDuration((d) => Math.max(MIN_DUR, Math.min(24 * 60 - startMin, d + delta)));
   };
+  const resetDuration = () => setDuration(serviceDurationMin);
+  const durationDelta = duration - serviceDurationMin;
 
   const handleSubmit = () => setPhase("confirm");
   const handleConfirm = () => {
@@ -193,26 +197,100 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
                 </div>
               </Field>
 
-              {/* END TIME */}
-              <Field label="End time">
-                <div className="flex items-center gap-2">
-                  <Stepper onClick={() => adjustEnd(-STEP)} ariaLabel="Earlier end">−</Stepper>
-                  <TimeBox value={fmt(endMin)} />
-                  <Stepper onClick={() => adjustEnd(STEP)} ariaLabel="Later end">+</Stepper>
+              {/* DURATION — service has a set length; surface it and let the
+                  pro deviate deliberately rather than free-form a range. */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between">
+                  <div
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: MIDNIGHT,
+                      opacity: 0.55,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Length
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (adjustLengthOpen && durationDelta !== 0) resetDuration();
+                      setAdjustLengthOpen((v) => !v);
+                    }}
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: ORANGE,
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {adjustLengthOpen ? "Use service length" : "Adjust length"}
+                  </button>
                 </div>
+
                 <div
+                  className="rounded-xl px-4 py-3"
                   style={{
-                    fontFamily: UI,
-                    fontSize: 12,
-                    color: MIDNIGHT,
-                    opacity: 0.55,
-                    marginTop: 6,
-                    fontVariantNumeric: "tabular-nums",
+                    backgroundColor: "rgba(6,28,39,0.04)",
+                    border: "1px solid rgba(6,28,39,0.12)",
                   }}
                 >
-                  {duration} min total
+                  <div className="flex items-baseline justify-between">
+                    <div
+                      style={{
+                        fontFamily: UI,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: MIDNIGHT,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {duration} min
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: UI,
+                        fontSize: 12,
+                        color: MIDNIGHT,
+                        opacity: 0.6,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      Ends {fmt(endMin)}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: UI,
+                      fontSize: 11.5,
+                      marginTop: 4,
+                      color: durationDelta === 0 ? MIDNIGHT : ORANGE,
+                      opacity: durationDelta === 0 ? 0.55 : 1,
+                      fontWeight: durationDelta === 0 ? 500 : 600,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {durationDelta === 0
+                      ? `Service standard · ${serviceDurationMin} min`
+                      : `${durationDelta > 0 ? "+" : ""}${durationDelta} min vs ${serviceDurationMin}-min standard`}
+                  </div>
                 </div>
-              </Field>
+
+                {adjustLengthOpen ? (
+                  <div className="flex items-center gap-2">
+                    <Stepper onClick={() => adjustDuration(-STEP)} ariaLabel="Shorter">−</Stepper>
+                    <TimeBox value={`${duration} min`} />
+                    <Stepper onClick={() => adjustDuration(STEP)} ariaLabel="Longer">+</Stepper>
+                  </div>
+                ) : null}
+              </div>
 
               {/* REASON */}
               <Field label="Reason (optional)">
