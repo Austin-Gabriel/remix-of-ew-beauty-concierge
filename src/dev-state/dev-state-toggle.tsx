@@ -100,6 +100,13 @@ const AVAILABILITIES: { value: DevAvailability; label: string; hint: string }[] 
   { value: "limited", label: "Limited", hint: "3 days only" },
 ];
 
+const RESCHEDULE_SIMS: { value: DevRescheduleSim; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Pending proposals run their TTL" },
+  { value: "accept", label: "Sim. accept", hint: "Client accepts the proposal" },
+  { value: "decline", label: "Sim. decline", hint: "Client declines — booking reverts" },
+  { value: "expire", label: "Sim. expire", hint: "Proposal times out" },
+];
+
 export function DevStateToggle() {
   const {
     enabled,
