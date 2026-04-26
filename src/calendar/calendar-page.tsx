@@ -3194,12 +3194,13 @@ function BufferSheet({
 }
 
 /**
- * Availability sheet — multi-range editor.
+ * Availability sheet — multi-range editor with deliberate save.
  *
  * Each day row supports an arbitrary number of `{ startMin, endMin }` ranges.
- * On/off toggle clears or seeds a single 10–6 range. Inline `<input type="time">`
- * pairs let the pro adjust each range. Every edit writes through to dev-state's
- * `availabilityOverride` so the calendar grid re-renders LIVE — no refresh.
+ * Edits update LOCAL sheet state immediately for visual feedback, but only
+ * commit to dev-state's `availabilityOverride` (and thus the live calendar
+ * grid) when the pro taps the primary "Save changes" button. Closing the
+ * sheet with unsaved edits triggers a "Discard changes?" confirmation.
  */
 function AvailabilitySheet({
   availability,
@@ -3211,20 +3212,44 @@ function AvailabilitySheet({
   onBack?: () => void;
 }) {
   const { setAvailabilityOverride } = useDevState();
-  const [local, setLocal] = useState<AvailabilityWeek>(() => normalize(availability));
+  const initial = useMemo(() => normalize(availability), [availability]);
+  const [local, setLocal] = useState<AvailabilityWeek>(initial);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [discardPrompt, setDiscardPrompt] = useState<null | "close" | "back">(null);
 
-  // Live propagation: every state change is mirrored into dev-state so the
-  // calendar grid behind the sheet repaints immediately.
-  const commit = (next: AvailabilityWeek) => {
+  const dirty = useMemo(() => !sameAvailability(local, initial), [local, initial]);
+
+  const update = (next: AvailabilityWeek) => {
     setLocal(next);
+    setSavedAt(null);
+  };
+
+  const save = () => {
     const out: Record<number, { startMin: number; endMin: number }[]> = {};
-    for (let i = 0; i < 7; i++) out[i] = (next[i] ?? []).map((r) => ({ ...r }));
+    for (let i = 0; i < 7; i++) out[i] = (local[i] ?? []).map((r) => ({ ...r }));
     setAvailabilityOverride(out);
+    setSavedAt(Date.now());
+  };
+
+  // After save, briefly show confirmation, then clear.
+  useEffect(() => {
+    if (savedAt == null) return;
+    const t = window.setTimeout(() => setSavedAt(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [savedAt]);
+
+  const guarded = (intent: "close" | "back") => {
+    if (dirty) {
+      setDiscardPrompt(intent);
+      return;
+    }
+    if (intent === "close") onClose();
+    else onBack?.();
   };
 
   const toggleDay = (idx: number) => {
     const cur = local[idx] ?? [];
-    commit({
+    update({
       ...local,
       [idx]: cur.length ? [] : [{ startMin: 10 * 60, endMin: 18 * 60 }],
     });
@@ -3232,16 +3257,15 @@ function AvailabilitySheet({
 
   const addRange = (idx: number) => {
     const cur = local[idx] ?? [];
-    // Find a sensible next start: 1h after the last range's end (or 10am).
     const lastEnd = cur.length ? cur[cur.length - 1].endMin : 9 * 60;
     const start = Math.min(lastEnd + 60, 22 * 60);
     const end = Math.min(start + 120, 23 * 60);
-    commit({ ...local, [idx]: [...cur, { startMin: start, endMin: end }] });
+    update({ ...local, [idx]: [...cur, { startMin: start, endMin: end }] });
   };
 
   const removeRange = (idx: number, ri: number) => {
     const cur = local[idx] ?? [];
-    commit({ ...local, [idx]: cur.filter((_, i) => i !== ri) });
+    update({ ...local, [idx]: cur.filter((_, i) => i !== ri) });
   };
 
   const updateRange = (
@@ -3251,7 +3275,7 @@ function AvailabilitySheet({
   ) => {
     const cur = local[idx] ?? [];
     const updated = cur.map((r, i) => (i === ri ? { ...r, ...next } : r));
-    commit({ ...local, [idx]: updated });
+    update({ ...local, [idx]: updated });
   };
 
   return (
