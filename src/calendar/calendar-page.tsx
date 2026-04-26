@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Bell,
@@ -76,6 +76,44 @@ const GUTTER_W = 44;
 const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 22;
 const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
+
+/* Dynamic per-day grid range: collapse to (earliest start − 1h) … (latest end + 1h).
+ * Falls back to default 7-22 when the day has no availability ranges (e.g. day off),
+ * so the pro can still tap into the grid to block or schedule. */
+interface GridRange {
+  /** Hour the rendered grid starts at (inclusive). */
+  gridStart: number;
+  /** Hour the rendered grid ends at (inclusive). */
+  gridEnd: number;
+  /** Hour the pro's actual work day starts (inclusive). */
+  workStart: number | null;
+  /** Hour the pro's actual work day ends (inclusive). */
+  workEnd: number | null;
+}
+
+function computeGridRange(dayAv: AvailabilityRange[]): GridRange {
+  if (!dayAv.length) {
+    return { gridStart: GRID_START_HOUR, gridEnd: GRID_END_HOUR, workStart: null, workEnd: null };
+  }
+  const earliestMin = Math.min(...dayAv.map((r) => r.startMin));
+  const latestMin = Math.max(...dayAv.map((r) => r.endMin));
+  const workStart = Math.floor(earliestMin / 60);
+  const workEnd = Math.ceil(latestMin / 60);
+  const gridStart = Math.max(0, workStart - 1);
+  const gridEnd = Math.min(24, workEnd + 1);
+  return { gridStart, gridEnd, workStart, workEnd };
+}
+
+const GridRangeContext = createContext<GridRange>({
+  gridStart: GRID_START_HOUR,
+  gridEnd: GRID_END_HOUR,
+  workStart: null,
+  workEnd: null,
+});
+
+function useGridRange(): GridRange {
+  return useContext(GridRangeContext);
+}
 
 /** Local-date → "YYYY-MM-DD" so we can round-trip through search params
  *  without timezone drift (toISOString would shift to UTC). */
@@ -691,8 +729,9 @@ function StatStrip({
 
 function HourGutter({ hourHeight }: { hourHeight: number }) {
   const { text } = useHomeTheme();
+  const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
-  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
   return (
     <div
       className="relative"
@@ -703,7 +742,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
       }}
     >
       {hours.map((h) => {
-        const top = (h - GRID_START_HOUR) * hourHeight;
+        const top = (h - gridStart) * hourHeight;
         return (
           <span
             key={h}
@@ -730,12 +769,13 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
 }
 
 function HourLinesBg({ hourHeight }: { hourHeight: number }) {
+  const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
-  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+  for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
   return (
     <div className="pointer-events-none absolute inset-0">
       {hours.map((h, i) => {
-        const top = (h - GRID_START_HOUR) * hourHeight;
+        const top = (h - gridStart) * hourHeight;
         return (
           <div key={h}>
             <div
@@ -763,13 +803,68 @@ function HourLinesBg({ hourHeight }: { hourHeight: number }) {
   );
 }
 
-function minutesIntoGrid(d: Date): number {
-  const m = (d.getHours() - GRID_START_HOUR) * 60 + d.getMinutes();
+function minutesIntoGrid(d: Date, gridStartHour: number = GRID_START_HOUR): number {
+  const m = (d.getHours() - gridStartHour) * 60 + d.getMinutes();
   return Math.max(0, m);
 }
 
 function pxFor(min: number, hourHeight: number): number {
   return (min / 60) * hourHeight;
+}
+
+/**
+ * DayGridScroller: scroll wrapper sized to the dynamic per-day grid range.
+ * Renders a muted overlay across the buffer hours (one hour pad on each side
+ * of the pro's earliest/latest work range) so they read as "outside hours" —
+ * visually distinct from the warm work band and from manually-blocked time.
+ */
+function DayGridScroller({
+  dayAv,
+  children,
+}: {
+  dayAv: AvailabilityRange[];
+  children: React.ReactNode;
+}) {
+  const { gridStart, gridEnd, workStart, workEnd } = useGridRange();
+  void dayAv;
+  const totalHours = gridEnd - gridStart;
+  return (
+    <div
+      className="relative flex-1 overflow-y-auto"
+      style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+    >
+      <div
+        className="relative flex"
+        style={{ height: totalHours * HOUR_HEIGHT_DAY }}
+      >
+        {/* Outside-hours buffer tint — leading pad */}
+        {workStart != null ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 z-0"
+            style={{
+              top: 0,
+              height: (workStart - gridStart) * HOUR_HEIGHT_DAY,
+              backgroundColor: "rgba(6,28,39,0.45)",
+            }}
+          />
+        ) : null}
+        {/* Outside-hours buffer tint — trailing pad */}
+        {workEnd != null ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 z-0"
+            style={{
+              top: (workEnd - gridStart) * HOUR_HEIGHT_DAY,
+              height: (gridEnd - workEnd) * HOUR_HEIGHT_DAY,
+              backgroundColor: "rgba(6,28,39,0.45)",
+            }}
+          />
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
 }
 
 /* =====================================================================
@@ -851,14 +946,8 @@ function DayView({
         ]}
       />
 
-      <div
-        className="relative flex-1 overflow-y-auto"
-        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
-      >
-        <div
-          className="relative flex"
-          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
-        >
+      <GridRangeContext.Provider value={computeGridRange(dayAv)}>
+        <DayGridScroller dayAv={dayAv}>
           <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
           <div className="relative flex-1" style={{ paddingRight: 8 }}>
             <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
@@ -881,8 +970,8 @@ function DayView({
               showInlineLabels
             />
           </div>
-        </div>
-      </div>
+        </DayGridScroller>
+      </GridRangeContext.Provider>
     </div>
   );
 }
@@ -1155,14 +1244,8 @@ function WeekStripAndDay({
       </div>
 
       {/* SINGLE-DAY VERTICAL GRID — full-width readable cards */}
-      <div
-        className="relative flex-1 overflow-y-auto"
-        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
-      >
-        <div
-          className="relative flex"
-          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
-        >
+      <GridRangeContext.Provider value={computeGridRange(dayAv)}>
+        <DayGridScroller dayAv={dayAv}>
           <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
           <div className="relative flex-1" style={{ paddingRight: 8 }}>
             <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
@@ -1185,14 +1268,15 @@ function WeekStripAndDay({
               showInlineLabels
             />
           </div>
-        </div>
-      </div>
+        </DayGridScroller>
+      </GridRangeContext.Provider>
     </div>
   );
 }
 
 function GlobalNowLine({ hourHeight }: { hourHeight: number }) {
-  const top = pxFor(minutesIntoGrid(new Date()), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(new Date(), gridStart), hourHeight);
   return (
     <div
       aria-hidden
@@ -1264,6 +1348,7 @@ function DayColumnInner({
   onTapBuffer: (b: TravelBuffer) => void;
   showInlineLabels: boolean;
 }) {
+  const { gridStart } = useGridRange();
   return (
     <div
       className="absolute inset-0"
@@ -1279,7 +1364,7 @@ function DayColumnInner({
       />
       {/* Inside-hours warmer band */}
       {availability.map((r, i) => {
-        const top = pxFor(r.startMin - GRID_START_HOUR * 60, hourHeight);
+        const top = pxFor(r.startMin - gridStart * 60, hourHeight);
         const h = pxFor(r.endMin - r.startMin, hourHeight);
         return (
           <div
@@ -1353,7 +1438,8 @@ function DayColumnInner({
 }
 
 function NowLineLocal({ hourHeight }: { hourHeight: number }) {
-  const top = pxFor(minutesIntoGrid(new Date()), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(new Date(), gridStart), hourHeight);
   return (
     <div
       aria-hidden
@@ -1400,7 +1486,8 @@ function BookingBlock({
   hero?: boolean;
   hourHeight: number;
 }) {
-  const top = pxFor(minutesIntoGrid(item.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(item.startsAt, gridStart), hourHeight);
   const h = Math.max(28, pxFor(item.durationMin, hourHeight));
   const tiny = h < 44;
   const initials = (item.clientFirst[0] ?? "").toUpperCase();
@@ -1616,7 +1703,8 @@ function abbrevService(s: string): string {
 }
 
 function FreePill({ slot, hourHeight }: { slot: FreeSlot; hourHeight: number }) {
-  const top = pxFor(minutesIntoGrid(slot.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(slot.startsAt, gridStart), hourHeight);
   const h = Math.max(
     28,
     pxFor((slot.endsAt.getTime() - slot.startsAt.getTime()) / 60_000, hourHeight),
@@ -1660,7 +1748,8 @@ function BufferBlock({
   hourHeight: number;
   showInlineLabel: boolean;
 }) {
-  const top = pxFor(minutesIntoGrid(buffer.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(buffer.startsAt, gridStart), hourHeight);
   const h = Math.max(compact ? 8 : 14, pxFor(buffer.minutes, hourHeight));
   return (
     <button
@@ -1713,7 +1802,8 @@ function BlockBlock({
   hourHeight: number;
   onTap?: () => void;
 }) {
-  const top = pxFor(minutesIntoGrid(block.startsAt), hourHeight);
+  const { gridStart } = useGridRange();
+  const top = pxFor(minutesIntoGrid(block.startsAt, gridStart), hourHeight);
   const h = Math.max(
     18,
     pxFor((block.endsAt.getTime() - block.startsAt.getTime()) / 60_000, hourHeight),
@@ -1863,6 +1953,7 @@ function DragToBlockSurface({
   onCommit: (start: Date, minutes?: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { gridStart } = useGridRange();
   const [drag, setDrag] = useState<{ startMin: number; endMin: number } | null>(
     null,
   );
@@ -1878,7 +1969,7 @@ function DragToBlockSurface({
 
   const buildStart = (min: number): Date => {
     const d = new Date(day);
-    d.setHours(GRID_START_HOUR, 0, 0, 0);
+    d.setHours(gridStart, 0, 0, 0);
     d.setMinutes(d.getMinutes() + min);
     return d;
   };
@@ -3103,12 +3194,13 @@ function BufferSheet({
 }
 
 /**
- * Availability sheet — multi-range editor.
+ * Availability sheet — multi-range editor with deliberate save.
  *
  * Each day row supports an arbitrary number of `{ startMin, endMin }` ranges.
- * On/off toggle clears or seeds a single 10–6 range. Inline `<input type="time">`
- * pairs let the pro adjust each range. Every edit writes through to dev-state's
- * `availabilityOverride` so the calendar grid re-renders LIVE — no refresh.
+ * Edits update LOCAL sheet state immediately for visual feedback, but only
+ * commit to dev-state's `availabilityOverride` (and thus the live calendar
+ * grid) when the pro taps the primary "Save changes" button. Closing the
+ * sheet with unsaved edits triggers a "Discard changes?" confirmation.
  */
 function AvailabilitySheet({
   availability,
@@ -3120,20 +3212,44 @@ function AvailabilitySheet({
   onBack?: () => void;
 }) {
   const { setAvailabilityOverride } = useDevState();
-  const [local, setLocal] = useState<AvailabilityWeek>(() => normalize(availability));
+  const initial = useMemo(() => normalize(availability), [availability]);
+  const [local, setLocal] = useState<AvailabilityWeek>(initial);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [discardPrompt, setDiscardPrompt] = useState<null | "close" | "back">(null);
 
-  // Live propagation: every state change is mirrored into dev-state so the
-  // calendar grid behind the sheet repaints immediately.
-  const commit = (next: AvailabilityWeek) => {
+  const dirty = useMemo(() => !sameAvailability(local, initial), [local, initial]);
+
+  const update = (next: AvailabilityWeek) => {
     setLocal(next);
+    setSavedAt(null);
+  };
+
+  const save = () => {
     const out: Record<number, { startMin: number; endMin: number }[]> = {};
-    for (let i = 0; i < 7; i++) out[i] = (next[i] ?? []).map((r) => ({ ...r }));
+    for (let i = 0; i < 7; i++) out[i] = (local[i] ?? []).map((r) => ({ ...r }));
     setAvailabilityOverride(out);
+    setSavedAt(Date.now());
+  };
+
+  // After save, briefly show confirmation, then clear.
+  useEffect(() => {
+    if (savedAt == null) return;
+    const t = window.setTimeout(() => setSavedAt(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [savedAt]);
+
+  const guarded = (intent: "close" | "back") => {
+    if (dirty) {
+      setDiscardPrompt(intent);
+      return;
+    }
+    if (intent === "close") onClose();
+    else onBack?.();
   };
 
   const toggleDay = (idx: number) => {
     const cur = local[idx] ?? [];
-    commit({
+    update({
       ...local,
       [idx]: cur.length ? [] : [{ startMin: 10 * 60, endMin: 18 * 60 }],
     });
@@ -3141,16 +3257,15 @@ function AvailabilitySheet({
 
   const addRange = (idx: number) => {
     const cur = local[idx] ?? [];
-    // Find a sensible next start: 1h after the last range's end (or 10am).
     const lastEnd = cur.length ? cur[cur.length - 1].endMin : 9 * 60;
     const start = Math.min(lastEnd + 60, 22 * 60);
     const end = Math.min(start + 120, 23 * 60);
-    commit({ ...local, [idx]: [...cur, { startMin: start, endMin: end }] });
+    update({ ...local, [idx]: [...cur, { startMin: start, endMin: end }] });
   };
 
   const removeRange = (idx: number, ri: number) => {
     const cur = local[idx] ?? [];
-    commit({ ...local, [idx]: cur.filter((_, i) => i !== ri) });
+    update({ ...local, [idx]: cur.filter((_, i) => i !== ri) });
   };
 
   const updateRange = (
@@ -3160,11 +3275,15 @@ function AvailabilitySheet({
   ) => {
     const cur = local[idx] ?? [];
     const updated = cur.map((r, i) => (i === ri ? { ...r, ...next } : r));
-    commit({ ...local, [idx]: updated });
+    update({ ...local, [idx]: updated });
   };
 
   return (
-    <SheetShell title="Availability" onClose={onClose} onBack={onBack}>
+    <SheetShell
+      title="Availability"
+      onClose={() => guarded("close")}
+      onBack={onBack ? () => guarded("back") : undefined}
+    >
       <div
         style={{
           fontFamily: UI,
@@ -3299,21 +3418,131 @@ function AvailabilitySheet({
           );
         })}
       </div>
+      <div className="mt-4 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty}
+          className="rounded-full px-4 transition-opacity active:opacity-80 disabled:cursor-not-allowed"
+          style={{
+            height: 48,
+            backgroundColor: dirty ? ORANGE : "rgba(240,235,216,0.06)",
+            color: dirty ? MIDNIGHT : CREAM,
+            opacity: dirty ? 1 : 0.45,
+            fontFamily: UI,
+            fontSize: 14,
+            fontWeight: 700,
+            border: dirty ? "none" : "1px solid rgba(240,235,216,0.10)",
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {dirty ? "Save changes" : "No changes"}
+        </button>
+        {savedAt != null && !dirty ? (
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 11,
+              color: ORANGE,
+              opacity: 0.95,
+              textAlign: "center",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            ✓ Saved
+          </div>
+        ) : null}
+      </div>
+
+      {discardPrompt ? (
+        <DiscardPrompt
+          onCancel={() => setDiscardPrompt(null)}
+          onConfirm={() => {
+            const intent = discardPrompt;
+            setDiscardPrompt(null);
+            // Roll back local edits before navigating away.
+            setLocal(initial);
+            if (intent === "close") onClose();
+            else onBack?.();
+          }}
+        />
+      ) : null}
+    </SheetShell>
+  );
+}
+
+function DiscardPrompt({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center"
+      style={{ fontFamily: UI }}
+    >
+      <button
+        type="button"
+        aria-label="Cancel"
+        onClick={onCancel}
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+      />
       <div
+        role="dialog"
+        aria-label="Discard changes"
+        className="relative m-4 w-full max-w-sm rounded-2xl p-5"
         style={{
-          fontFamily: UI,
-          fontSize: 11,
+          backgroundColor: NAVY_PANEL,
+          border: "1px solid rgba(240,235,216,0.10)",
           color: CREAM,
-          opacity: 0.5,
-          textAlign: "center",
-          marginTop: 14,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
         }}
       >
-        Saved live
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+          Discard changes?
+        </div>
+        <div style={{ fontSize: 13, opacity: 0.65, marginBottom: 14 }}>
+          You have unsaved availability edits. Leave without saving?
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-full transition-opacity active:opacity-70"
+            style={{
+              height: 44,
+              backgroundColor: "rgba(240,235,216,0.06)",
+              border: "1px solid rgba(240,235,216,0.12)",
+              color: CREAM,
+              fontFamily: UI,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-full transition-opacity active:opacity-70"
+            style={{
+              height: 44,
+              backgroundColor: ORANGE,
+              color: MIDNIGHT,
+              border: "none",
+              fontFamily: UI,
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Discard
+          </button>
+        </div>
       </div>
-    </SheetShell>
+    </div>
   );
 }
 
@@ -3360,4 +3589,17 @@ function normalize(av: AvailabilityWeek): AvailabilityWeek {
   const out: AvailabilityWeek = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
   for (let i = 0; i < 7; i++) out[i] = (av[i] ?? []).map((r) => ({ ...r }));
   return out;
+}
+
+/** Structural equality for two AvailabilityWeek values. Used to detect dirty state. */
+function sameAvailability(a: AvailabilityWeek, b: AvailabilityWeek): boolean {
+  for (let i = 0; i < 7; i++) {
+    const ar = a[i] ?? [];
+    const br = b[i] ?? [];
+    if (ar.length !== br.length) return false;
+    for (let j = 0; j < ar.length; j++) {
+      if (ar[j].startMin !== br[j].startMin || ar[j].endMin !== br[j].endMin) return false;
+    }
+  }
+  return true;
 }
