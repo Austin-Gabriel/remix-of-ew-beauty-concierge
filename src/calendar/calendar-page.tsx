@@ -1194,14 +1194,8 @@ function WeekStripAndDay({
       </div>
 
       {/* SINGLE-DAY VERTICAL GRID — full-width readable cards */}
-      <div
-        className="relative flex-1 overflow-y-auto"
-        style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
-      >
-        <div
-          className="relative flex"
-          style={{ height: GRID_HOURS * HOUR_HEIGHT_DAY }}
-        >
+      <GridRangeContext.Provider value={computeGridRange(dayAv)}>
+        <DayGridScroller dayAv={dayAv}>
           <HourGutter hourHeight={HOUR_HEIGHT_DAY} />
           <div className="relative flex-1" style={{ paddingRight: 8 }}>
             <HourLinesBg hourHeight={HOUR_HEIGHT_DAY} />
@@ -1224,8 +1218,8 @@ function WeekStripAndDay({
               showInlineLabels
             />
           </div>
-        </div>
-      </div>
+        </DayGridScroller>
+      </GridRangeContext.Provider>
     </div>
   );
 }
