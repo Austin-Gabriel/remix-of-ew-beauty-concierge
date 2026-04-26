@@ -1223,7 +1223,7 @@ function DayOffPanel({
                   }}
                 >
                   <span style={{ fontFamily: UI, fontSize: 13, fontWeight: 600, color: CREAM }}>
-                    {b.serviceName ?? "Booking"}
+                    {b.service}
                   </span>
                   <span style={{ fontFamily: UI, fontSize: 12, color: CREAM, opacity: 0.7 }}>
                     {fmtTimeShort(b.startsAt)}
