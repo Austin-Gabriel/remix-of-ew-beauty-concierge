@@ -43,6 +43,8 @@ export interface BookingRowCardProps {
     onAccept: () => void;
     onDecline: () => void;
   };
+  /** Pending reschedule proposal — shows a small pill on the row. */
+  pendingReschedule?: { timeLeftLabel: string };
 }
 
 export function BookingRowCard(props: BookingRowCardProps) {
