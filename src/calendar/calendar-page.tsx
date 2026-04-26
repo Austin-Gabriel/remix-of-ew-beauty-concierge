@@ -1734,6 +1734,12 @@ function BookingBlock({
   const reschedule = useReschedule();
   const proposal = reschedule.proposalFor(item.id);
   const override = reschedule.overrides[item.id];
+  // Subscribing to `tick` keeps the inline countdown label fresh once a
+  // proposal is pending. Without this read, the label would render once
+  // and never update until the booking re-rendered for some other reason.
+  const _tick = reschedule.tick;
+  void _tick;
+  const [pendingSheetOpen, setPendingSheetOpen] = useState(false);
 
   const effStart = override?.startsAt ?? item.startsAt;
   const effDur = override?.durationMin ?? item.durationMin;
