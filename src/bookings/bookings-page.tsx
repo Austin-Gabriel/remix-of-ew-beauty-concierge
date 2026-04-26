@@ -452,6 +452,7 @@ function CollapsibleHorizonGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const { text } = useHomeTheme();
+  const { proposalFor, tick } = useReschedule();
   if (bookings.length === 0) return null;
 
   return (
