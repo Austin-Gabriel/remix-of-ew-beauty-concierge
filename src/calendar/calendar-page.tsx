@@ -2851,6 +2851,20 @@ function BlockTimeSheet({
     setDurationMin((d) => Math.max(MIN_DUR, Math.min(MAX_DUR, d + delta)));
   };
 
+  const adjustEnd = (deltaMin: number) => {
+    setDurationMin((d) => Math.max(MIN_DUR, Math.min(MAX_DUR, d + deltaMin)));
+  };
+
+  const setEndFromPicker = (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    const next = new Date(start);
+    next.setHours(h, m, 0, 0);
+    let diff = Math.round((next.getTime() - start.getTime()) / 60_000);
+    // If user picked an earlier clock time, assume next day rollover is unwanted — clamp to min.
+    if (diff < MIN_DUR) diff = MIN_DUR;
+    setDurationMin(Math.min(MAX_DUR, diff));
+  };
+
   const setUntilEod = () => {
     const eod = new Date(start);
     eod.setHours(GRID_END_HOUR, 0, 0, 0);
