@@ -1105,6 +1105,7 @@ function WeekStripAndDay({
   onTapEmpty,
   onTapBlock,
   onTapBuffer,
+  onEditAvailability,
 }: {
   days: Date[];
   today: Date;
@@ -1120,6 +1121,7 @@ function WeekStripAndDay({
   onTapEmpty: (start: Date, presetMinutes?: number) => void;
   onTapBlock: (id: string) => void;
   onTapBuffer: (b: TravelBuffer) => void;
+  onEditAvailability: () => void;
 }) {
   void blockedPreset;
   const dayAv = availability[heroDay.getDay()] ?? [];
