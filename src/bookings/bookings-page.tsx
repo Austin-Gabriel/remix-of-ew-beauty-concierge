@@ -506,6 +506,7 @@ function CollapsibleHorizonGroup({
               key={b.id}
               booking={adaptCanonical(b)}
               pending={pendingPropsFor(b, onAccept, onDecline)}
+              pendingReschedule={pendingReschedulePropFor(b.id, proposalFor, tick)}
               onSelect={() => onOpen(b.id)}
             />
           ))}
