@@ -1734,6 +1734,12 @@ function BookingBlock({
   const reschedule = useReschedule();
   const proposal = reschedule.proposalFor(item.id);
   const override = reschedule.overrides[item.id];
+  // Subscribing to `tick` keeps the inline countdown label fresh once a
+  // proposal is pending. Without this read, the label would render once
+  // and never update until the booking re-rendered for some other reason.
+  const _tick = reschedule.tick;
+  void _tick;
+  const [pendingSheetOpen, setPendingSheetOpen] = useState(false);
 
   const effStart = override?.startsAt ?? item.startsAt;
   const effDur = override?.durationMin ?? item.durationMin;
@@ -1783,6 +1789,10 @@ function BookingBlock({
   const handleTap = () => {
     if (armed || drag) return;
     if (!tappedRef.current) return;
+    if (showProposed) {
+      setPendingSheetOpen(true);
+      return;
+    }
     onTap();
   };
 
@@ -1865,9 +1875,60 @@ function BookingBlock({
     });
   };
 
+  // Original-slot ghost: rendered at the booking's pre-proposal time so the
+  // pro can still see "this is moving from here". Dimmed, dashed cream
+  // outline, "Original" label. Non-interactive.
+  const ghost = showProposed ? (() => {
+    const gTop = pxFor(minutesIntoGrid(effStart, gridStart), hourHeight);
+    const gH = Math.max(28, pxFor(effDur, hourHeight));
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none absolute z-[1] overflow-hidden"
+        style={{
+          top: gTop,
+          height: gH,
+          left: 2,
+          right: 2,
+          borderRadius: 10,
+          backgroundColor: "rgba(255,255,255,0.20)",
+          border: "1px dashed rgba(240,235,216,0.45)",
+          padding: compact ? "4px 6px" : "6px 8px",
+          color: CREAM,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: UI,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            opacity: 0.7,
+          }}
+        >
+          Original
+        </div>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: UI,
+            fontSize: compact ? 10 : 11,
+            fontWeight: 500,
+            opacity: 0.55,
+            marginTop: 2,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {fmtTimeShort(effStart)}
+        </div>
+      </div>
+    );
+  })() : null;
+
   const isPending = showProposed;
 
-  return (
+  const card = (
     <div
       ref={wrapperRef}
       role="button"
@@ -1949,6 +2010,45 @@ function BookingBlock({
         touchAction: armed || drag ? "none" : "auto",
       }}
     >
+      {/* Inline pending label — sits inside the card content beneath the
+          name/service so the booking still reads normally and the pending
+          state travels with it. */}
+      {isPending && proposal ? (
+        <div
+          className="absolute"
+          style={{
+            left: compact ? 4 : 6,
+            right: compact ? 4 : 6,
+            bottom: compact ? 3 : 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: "rgba(255,130,63,0.16)",
+            color: "#7A2E0E",
+            padding: compact ? "1px 5px" : "2px 6px",
+            borderRadius: 6,
+            fontFamily: UI,
+            fontSize: compact ? 9 : 10,
+            fontWeight: 700,
+            letterSpacing: "-0.005em",
+            zIndex: 2,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 9999,
+              backgroundColor: ORANGE,
+            }}
+          />
+          <span className="truncate">
+            Awaiting {proposal.clientLabel.split(" ")[0]} ·{" "}
+            {formatTimeLeft(proposal.expiresAt.getTime() - Date.now())}
+          </span>
+        </div>
+      ) : null}
       {armed ? (
         <>
           <div
@@ -2226,6 +2326,170 @@ function BookingBlock({
         </>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {ghost}
+      {card}
+      {showProposed && proposal ? (
+        <PendingActionSheet
+          open={pendingSheetOpen}
+          onClose={() => setPendingSheetOpen(false)}
+          proposal={proposal}
+          onCancel={() => {
+            reschedule.cancel(item.id);
+            setPendingSheetOpen(false);
+          }}
+          onViewDetails={() => {
+            setPendingSheetOpen(false);
+            onTap();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/* =====================================================================
+   PENDING RESCHEDULE — booking action sheet
+   Tapping a booking that's in the pending-reschedule state opens this
+   compact sheet with View details / Cancel request / Message.
+===================================================================== */
+function PendingActionSheet({
+  open,
+  onClose,
+  proposal,
+  onCancel,
+  onViewDetails,
+}: {
+  open: boolean;
+  onClose: () => void;
+  proposal: import("@/calendar/reschedule-context").PendingReschedule;
+  onCancel: () => void;
+  onViewDetails: () => void;
+}) {
+  if (!open) return null;
+  const firstName = proposal.clientLabel.split(" ")[0];
+  return (
+    <div
+      className="fixed inset-0 z-[80]"
+      style={{ fontFamily: UI }}
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+      />
+      <div
+        role="dialog"
+        aria-label="Pending reschedule actions"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute bottom-0 left-1/2 w-full max-w-md -translate-x-1/2 overflow-hidden rounded-t-3xl"
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid rgba(6,28,39,0.10)",
+          borderBottom: "none",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)",
+          animation: "ewa-sheet-up 280ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        <div className="flex justify-center pt-3">
+          <span
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 4,
+              backgroundColor: "rgba(6,28,39,0.18)",
+            }}
+          />
+        </div>
+        <div className="px-5 pb-2 pt-3">
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: "#7A2E0E",
+            }}
+          >
+            Pending reschedule
+          </div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              marginTop: 4,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Awaiting {firstName} ·{" "}
+            {formatTimeLeft(proposal.expiresAt.getTime() - Date.now())}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: MIDNIGHT,
+              opacity: 0.6,
+              marginTop: 4,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmtTimeShort(proposal.originalStart)} →{" "}
+            {fmtTimeShort(proposal.proposedStart)} · {proposal.proposedDurationMin}m
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+          <RescheduleSheetButton label="View details" onClick={onViewDetails} />
+          <RescheduleSheetButton label={`Message ${firstName}`} onClick={onClose} />
+          <RescheduleSheetButton
+            label="Cancel request"
+            onClick={onCancel}
+            variant="danger"
+          />
+        </div>
+      </div>
+      <style>{`
+        @keyframes ewa-sheet-up {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function RescheduleSheetButton({
+  label,
+  onClick,
+  variant = "default",
+}: {
+  label: string;
+  onClick: () => void;
+  variant?: "default" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-xl py-3 text-left transition-opacity active:opacity-70"
+      style={{
+        backgroundColor:
+          variant === "danger" ? "rgba(220,38,38,0.08)" : "rgba(6,28,39,0.05)",
+        color: variant === "danger" ? "#B91C1C" : MIDNIGHT,
+        fontFamily: UI,
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: "-0.005em",
+        paddingLeft: 16,
+        paddingRight: 16,
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
