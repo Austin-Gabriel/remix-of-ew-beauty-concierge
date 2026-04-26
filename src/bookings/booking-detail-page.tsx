@@ -186,6 +186,8 @@ function OutgoingRescheduleBanner({
   timeLeftMs: number;
   onCancel: () => void;
 }) {
+  const { isDark } = useHomeTheme();
+  const bodyColor = isDark ? CREAM : MIDNIGHT;
   return (
     <div
       className="rounded-2xl px-4 py-3"
