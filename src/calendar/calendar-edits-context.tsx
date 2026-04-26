@@ -63,6 +63,7 @@ export function CalendarEditsProvider({ children }: { children: ReactNode }) {
       futureRef.current = [];
       setSnapshot(next);
       bumpHistory();
+      setVersion((v) => v + 1);
     },
     [snapshot, bumpHistory],
   );
