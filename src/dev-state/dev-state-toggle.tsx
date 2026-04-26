@@ -121,8 +121,10 @@ export function DevStateToggle() {
     setWeekDensity,
     setBlockedTime,
     setAvailability,
+    setRescheduleSim,
     reset,
   } = useDevState();
+  const reschedule = useReschedule();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -145,6 +147,22 @@ export function DevStateToggle() {
       setLifecycle("none");
     }
   }, [state.bookingSource, state.lifecycle, setLifecycle]);
+
+  // Reschedule sim bridge: fire the matching simulation on the latest pending
+  // proposal whenever the dev field flips away from "auto", then snap the
+  // field back to "auto" so the sim is a one-shot trigger.
+  useEffect(() => {
+    if (state.rescheduleSim === "auto") return;
+    const pending = reschedule.latestPending;
+    if (!pending) {
+      setRescheduleSim("auto");
+      return;
+    }
+    if (state.rescheduleSim === "accept") reschedule.simulateAccept(pending.bookingId);
+    else if (state.rescheduleSim === "decline") reschedule.simulateDecline(pending.bookingId);
+    else if (state.rescheduleSim === "expire") reschedule.simulateExpire(pending.bookingId);
+    setRescheduleSim("auto");
+  }, [state.rescheduleSim, reschedule, setRescheduleSim]);
 
   if (!mounted || !enabled) return null;
 
