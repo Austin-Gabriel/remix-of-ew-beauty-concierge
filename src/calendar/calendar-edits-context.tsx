@@ -173,6 +173,7 @@ export function useCalendarEdits(): CalendarEditsCtx {
       canRedo: false,
       undo: () => {},
       redo: () => {},
+      version: 0,
     };
   }
   return ctx;
