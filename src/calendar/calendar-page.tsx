@@ -3590,3 +3590,16 @@ function normalize(av: AvailabilityWeek): AvailabilityWeek {
   for (let i = 0; i < 7; i++) out[i] = (av[i] ?? []).map((r) => ({ ...r }));
   return out;
 }
+
+/** Structural equality for two AvailabilityWeek values. Used to detect dirty state. */
+function sameAvailability(a: AvailabilityWeek, b: AvailabilityWeek): boolean {
+  for (let i = 0; i < 7; i++) {
+    const ar = a[i] ?? [];
+    const br = b[i] ?? [];
+    if (ar.length !== br.length) return false;
+    for (let j = 0; j < ar.length; j++) {
+      if (ar[j].startMin !== br[j].startMin || ar[j].endMin !== br[j].endMin) return false;
+    }
+  }
+  return true;
+}
