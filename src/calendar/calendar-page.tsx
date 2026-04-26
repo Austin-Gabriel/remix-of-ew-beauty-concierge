@@ -1199,12 +1199,17 @@ function WeekStripAndDay({
           {days.map((d, i) => {
             const isToday = isSameDay(d, today);
             const isHero = isSameDay(d, heroDay);
+            const dayOff = (availability[d.getDay()] ?? []).length === 0;
             // Selected day wins the filled-orange bagel. Today (when not
             // selected) gets a subtle ring accent so the pro can still spot it.
             const circleBg = isHero ? ORANGE : "transparent";
             const circleBorder =
               isToday && !isHero ? `1.5px solid ${ORANGE}` : "1px solid transparent";
             const circleFg = isHero ? MIDNIGHT : CREAM;
+            // Day off: mute both the initial and the date number when the
+            // chip isn't actively selected. Selected day-off still reads
+            // strong so the pro sees it's their current view.
+            const offMute = dayOff && !isHero;
             return (
               <button
                 key={i}
@@ -1212,6 +1217,7 @@ function WeekStripAndDay({
                 onClick={() => onHeroDayChange(d)}
                 className="flex min-w-0 flex-col items-center justify-center py-1.5 transition-opacity active:opacity-70"
                 style={{ border: "none", background: "transparent" }}
+                aria-label={dayOff ? `${dayInitial(i)} ${d.getDate()} (Day off)` : undefined}
               >
                 <span
                   style={{
@@ -1219,7 +1225,7 @@ function WeekStripAndDay({
                     fontSize: 10,
                     fontWeight: 600,
                     color: CREAM,
-                    opacity: isHero ? 0.95 : 0.5,
+                    opacity: isHero ? 0.95 : offMute ? 0.28 : 0.5,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                   }}
@@ -1239,6 +1245,7 @@ function WeekStripAndDay({
                     border: circleBorder,
                     letterSpacing: "-0.01em",
                     fontVariantNumeric: "tabular-nums",
+                    opacity: offMute ? 0.4 : 1,
                   }}
                 >
                   {d.getDate()}
