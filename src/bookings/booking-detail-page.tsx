@@ -254,6 +254,8 @@ function IncomingRescheduleBanner({
   proposedStart: Date;
   timeLeftMs: number;
 }) {
+  const { isDark } = useHomeTheme();
+  const bodyColor = isDark ? CREAM : MIDNIGHT;
   const proposedLabel = formatBookingDate(proposedStart);
   return (
     <div
