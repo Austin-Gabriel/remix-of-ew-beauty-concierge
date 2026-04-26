@@ -34,7 +34,26 @@ export interface PendingReschedule {
   status: ProposalStatus;
 }
 
-const PROPOSAL_TTL_MS = 60_000;
+/**
+ * Default proposal lifetime. Real product copy speaks in hours ("Awaiting
+ * Maya · 23h left"), but for dev/demo realism we keep the timer short
+ * enough that you can watch it tick. Override with `ttlMs` when calling
+ * `propose()` if you want a longer-lived demo proposal.
+ */
+const PROPOSAL_TTL_MS = 24 * 60 * 60 * 1000; // 24h default
+
+/** Format ms remaining into the compact "23h left" / "45m left" / "30s left" form. */
+export function formatTimeLeft(ms: number): string {
+  if (ms <= 0) return "expired";
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s left`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m left`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h left`;
+  const days = Math.floor(hr / 24);
+  return `${days}d left`;
+}
 
 interface RescheduleCtx {
   proposals: PendingReschedule[];
