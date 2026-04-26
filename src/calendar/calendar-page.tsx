@@ -1738,6 +1738,7 @@ function BookingBlock({
   hourHeight: number;
 }) {
   const { gridStart } = useGridRange();
+  const { isDark } = useHomeTheme();
   const reschedule = useReschedule();
   const proposal = reschedule.proposalFor(item.id);
   const override = reschedule.overrides[item.id];
