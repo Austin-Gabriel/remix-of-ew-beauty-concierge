@@ -1875,9 +1875,60 @@ function BookingBlock({
     });
   };
 
+  // Original-slot ghost: rendered at the booking's pre-proposal time so the
+  // pro can still see "this is moving from here". Dimmed, dashed cream
+  // outline, "Original" label. Non-interactive.
+  const ghost = showProposed ? (() => {
+    const gTop = pxFor(minutesIntoGrid(effStart, gridStart), hourHeight);
+    const gH = Math.max(28, pxFor(effDur, hourHeight));
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none absolute z-[1] overflow-hidden"
+        style={{
+          top: gTop,
+          height: gH,
+          left: 2,
+          right: 2,
+          borderRadius: 10,
+          backgroundColor: "rgba(255,255,255,0.20)",
+          border: "1px dashed rgba(240,235,216,0.45)",
+          padding: compact ? "4px 6px" : "6px 8px",
+          color: CREAM,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: UI,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            opacity: 0.7,
+          }}
+        >
+          Original
+        </div>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: UI,
+            fontSize: compact ? 10 : 11,
+            fontWeight: 500,
+            opacity: 0.55,
+            marginTop: 2,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {fmtTimeShort(effStart)}
+        </div>
+      </div>
+    );
+  })() : null;
+
   const isPending = showProposed;
 
-  return (
+  const card = (
     <div
       ref={wrapperRef}
       role="button"
