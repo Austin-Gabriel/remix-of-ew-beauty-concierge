@@ -215,8 +215,8 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     (v: DevAvailabilityOverride | null) => setState((s) => ({ ...s, availabilityOverride: v })),
     [],
   );
-  const setRescheduleSim = useCallback(
-    (v: DevRescheduleSim) => setState((s) => ({ ...s, rescheduleSim: v })),
+  const setRescheduleState = useCallback(
+    (v: DevRescheduleState) => setState((s) => ({ ...s, rescheduleState: v })),
     [],
   );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
@@ -225,10 +225,10 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim,
+      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -251,7 +251,7 @@ export function useDevState(): Ctx {
       setBlockedTime: () => {},
       setAvailability: () => {},
       setAvailabilityOverride: () => {},
-      setRescheduleSim: () => {},
+      setRescheduleState: () => {},
       reset: () => {},
     };
   }
