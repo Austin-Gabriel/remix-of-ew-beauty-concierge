@@ -2093,10 +2093,12 @@ function MonthView({
 function SheetShell({
   title,
   onClose,
+  onBack,
   children,
 }: {
   title: string;
   onClose: () => void;
+  onBack?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -2130,10 +2132,32 @@ function SheetShell({
             }}
           />
         </div>
-        <div className="flex items-center justify-between px-5 pt-3 pb-2">
-          <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            {title}
-          </h2>
+        <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label="Back"
+                className="flex items-center justify-center rounded-full"
+                style={{
+                  width: 32,
+                  height: 32,
+                  backgroundColor: "rgba(240,235,216,0.06)",
+                  color: CREAM,
+                  flexShrink: 0,
+                }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+            ) : null}
+            <h2
+              className="truncate"
+              style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}
+            >
+              {title}
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -2144,6 +2168,7 @@ function SheetShell({
               height: 32,
               backgroundColor: "rgba(240,235,216,0.06)",
               color: CREAM,
+              flexShrink: 0,
             }}
           >
             <X size={16} />
