@@ -376,7 +376,15 @@ function pendingPropsFor(
   };
 }
 
-function TodayHorizonGroup({
+function pendingReschedulePropFor(
+  bookingId: string,
+  proposalFor: ReturnType<typeof useReschedule>["proposalFor"],
+  _tick: number,
+): { timeLeftLabel: string } | undefined {
+  const p = proposalFor(bookingId);
+  if (!p || p.status !== "pending") return undefined;
+  return { timeLeftLabel: formatTimeLeft(p.expiresAt.getTime() - Date.now()) };
+}
   bookings,
   onAccept,
   onDecline,
