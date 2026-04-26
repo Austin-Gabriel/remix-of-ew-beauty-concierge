@@ -21,15 +21,24 @@ import {
 
 export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";
 
+/**
+ * Who initiated the reschedule. Drives copy + which actions render in the
+ * detail page action bar:
+ *  - "outgoing": pro proposed, client must respond → pro sees Cancel request
+ *  - "incoming": client proposed, pro must respond → pro sees Accept/Decline
+ */
+export type ProposalDirection = "outgoing" | "incoming";
+
 export interface PendingReschedule {
   bookingId: string;
   clientLabel: string;
+  direction: ProposalDirection;
   originalStart: Date;
   originalDurationMin: number;
   proposedStart: Date;
   proposedDurationMin: number;
   createdAt: Date;
-  /** When the proposal auto-expires if the client doesn't respond. */
+  /** When the proposal auto-expires if the counterparty doesn't respond. */
   expiresAt: Date;
   status: ProposalStatus;
 }
