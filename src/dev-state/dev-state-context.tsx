@@ -80,19 +80,29 @@ export type DevAvailabilityOverride = Record<
 >;
 
 /**
- * Reschedule simulator. Drives the pending reschedule flow without needing
- * a real client to respond. Setting anything other than "auto" forces the
- * matching outcome on the next (or current) pending proposal:
- *  - "auto"     → pending proposals run their TTL untouched
- *  - "accept"   → simulate the client accepting (booking moves permanently)
- *  - "decline"  → simulate the client declining (booking returns to original)
- *  - "expire"   → simulate the proposal timing out (returns to original)
+ * Reschedule render state. Drives what every reschedule-aware surface
+ * shows for the focus booking (calendar grid block, booking detail page,
+ * bookings list row). Setting this seeds or clears proposals on the
+ * focus booking so all surfaces re-render in sync.
  *
- * This is the ONLY surface that fires those simulations — the formerly
- * floating bubble is gone. Pros never see Sim. accept / decline / expire
- * buttons in real UI.
+ *  - "none"        → no pending state; booking renders normally
+ *  - "pending-out" → pro proposed; outgoing banner + ghost + pending ring
+ *  - "pending-in"  → client proposed; incoming banner + Accept/Decline bar
+ *  - "approved"    → counterparty accepted; renders post-acceptance state
+ *  - "declined"    → counterparty declined; renders original / declined state
+ *  - "expired"     → proposal timed out; same end state as declined
+ *
+ * The dev bridge (DevStateToggle) translates this into proposals on a
+ * stable focus booking ("b1"). Pros never see a Reschedule state radio
+ * group in real UI — this is dev-only scaffolding.
  */
-export type DevRescheduleSim = "auto" | "accept" | "decline" | "expire";
+export type DevRescheduleState =
+  | "none"
+  | "pending-out"
+  | "pending-in"
+  | "approved"
+  | "declined"
+  | "expired";
 
 export interface DevState {
   proState: DevProState;
@@ -106,7 +116,7 @@ export interface DevState {
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
   availabilityOverride: DevAvailabilityOverride | null;
-  rescheduleSim: DevRescheduleSim;
+  rescheduleState: DevRescheduleState;
 }
 
 const DEFAULT_STATE: DevState = {
@@ -121,7 +131,7 @@ const DEFAULT_STATE: DevState = {
   blockedTime: "auto",
   availability: "auto",
   availabilityOverride: null,
-  rescheduleSim: "auto",
+  rescheduleState: "none",
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
@@ -140,7 +150,7 @@ interface Ctx {
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
   setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
-  setRescheduleSim: (v: DevRescheduleSim) => void;
+  setRescheduleState: (v: DevRescheduleState) => void;
   reset: () => void;
 }
 
@@ -205,8 +215,8 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     (v: DevAvailabilityOverride | null) => setState((s) => ({ ...s, availabilityOverride: v })),
     [],
   );
-  const setRescheduleSim = useCallback(
-    (v: DevRescheduleSim) => setState((s) => ({ ...s, rescheduleSim: v })),
+  const setRescheduleState = useCallback(
+    (v: DevRescheduleState) => setState((s) => ({ ...s, rescheduleState: v })),
     [],
   );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
@@ -215,10 +225,10 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     () => ({
       enabled, state,
       setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim,
+      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleSim, reset],
+    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState, reset],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -241,7 +251,7 @@ export function useDevState(): Ctx {
       setBlockedTime: () => {},
       setAvailability: () => {},
       setAvailabilityOverride: () => {},
-      setRescheduleSim: () => {},
+      setRescheduleState: () => {},
       reset: () => {},
     };
   }

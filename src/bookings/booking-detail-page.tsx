@@ -114,16 +114,29 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   const handleOpenActive = () =>
     navigate({ to: "/bookings", search: { tab: "in-progress" } });
 
+  // Pending reschedule overrides the action bar:
+  //  - outgoing → pro is waiting; suppress Accept/Decline (no pending status)
+  //  - incoming → pro must respond; force action bar into accept/decline mode
+  const isIncomingPending = pendingProposal?.direction === "incoming";
+  const effectiveStatusForBar: BookingStatus = isIncomingPending ? "pending" : status;
+
   return (
     <HomeShell>
       <DetailHeader title="Booking" onBack={goBack} />
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-32 pt-2">
-        {pendingProposal ? (
-          <PendingRescheduleBanner
+        {pendingProposal?.direction === "outgoing" ? (
+          <OutgoingRescheduleBanner
             firstName={booking.clientName.split(" ")[0]}
             timeLeftMs={pendingProposal.expiresAt.getTime() - Date.now()}
             onCancel={() => reschedule.cancel(booking.id)}
+          />
+        ) : null}
+        {pendingProposal?.direction === "incoming" ? (
+          <IncomingRescheduleBanner
+            firstName={booking.clientName.split(" ")[0]}
+            proposedStart={pendingProposal.proposedStart}
+            timeLeftMs={pendingProposal.expiresAt.getTime() - Date.now()}
           />
         ) : null}
         <HeroBlock booking={booking} status={status} />
@@ -136,7 +149,7 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
         )}
         {status === "completed" ? <RatingCard booking={booking} /> : null}
         {booking.note ? <NotesCard note={booking.note} /> : null}
-        {(status === "confirmed" || status === "pending") && !pendingProposal ? (
+        {status === "confirmed" && !pendingProposal ? (
           <RescheduleEntryRow onClick={() => setRescheduleOpen(true)} />
         ) : null}
         <PolicyLink />
@@ -150,11 +163,11 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
 
       <DetailActionBar
         booking={booking}
-        status={status}
+        status={effectiveStatusForBar}
         lifecycleActive={lifecycleActive}
         currentTime={currentTime}
-        onAccept={handleAccept}
-        onDecline={handleDecline}
+        onAccept={isIncomingPending ? () => reschedule.simulateAccept(booking.id) : handleAccept}
+        onDecline={isIncomingPending ? () => reschedule.simulateDecline(booking.id) : handleDecline}
         onStart={handleStartBooking}
         onOpenActive={handleOpenActive}
       />
@@ -164,7 +177,7 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   );
 }
 
-function PendingRescheduleBanner({
+function OutgoingRescheduleBanner({
   firstName,
   timeLeftMs,
   onCancel,
@@ -178,7 +191,7 @@ function PendingRescheduleBanner({
       className="rounded-2xl px-4 py-3"
       style={{
         backgroundColor: "rgba(255,130,63,0.10)",
-        border: "1px solid rgba(255,130,63,0.45)",
+        border: "1px solid rgba(255,130,63,0.55)",
         boxShadow: `0 0 0 2px rgba(255,130,63,0.10)`,
       }}
     >
@@ -198,11 +211,11 @@ function PendingRescheduleBanner({
           <div
             style={{
               fontFamily: UI,
-              fontSize: 10,
-              fontWeight: 700,
+              fontSize: 10.5,
+              fontWeight: 800,
               letterSpacing: "1.4px",
               textTransform: "uppercase",
-              color: "#7A2E0E",
+              color: ORANGE,
             }}
           >
             Pending reschedule
@@ -210,10 +223,10 @@ function PendingRescheduleBanner({
           <div
             style={{
               fontFamily: UI,
-              fontSize: 14,
+              fontSize: 14.5,
               fontWeight: 700,
               color: MIDNIGHT,
-              marginTop: 2,
+              marginTop: 3,
               letterSpacing: "-0.005em",
             }}
           >
@@ -222,37 +235,116 @@ function PendingRescheduleBanner({
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
-          style={{
-            border: "1px solid rgba(6,28,39,0.18)",
-            backgroundColor: "transparent",
-            color: MIDNIGHT,
-            fontFamily: UI,
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          Message {firstName}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
-          style={{
-            border: "1px solid rgba(6,28,39,0.18)",
-            backgroundColor: "transparent",
-            color: MIDNIGHT,
-            fontFamily: UI,
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          Cancel request
-        </button>
+        <BannerSecondaryBtn>Message {firstName}</BannerSecondaryBtn>
+        <BannerSecondaryBtn onClick={onCancel}>Cancel request</BannerSecondaryBtn>
       </div>
     </div>
+  );
+}
+
+function IncomingRescheduleBanner({
+  firstName,
+  proposedStart,
+  timeLeftMs,
+}: {
+  firstName: string;
+  proposedStart: Date;
+  timeLeftMs: number;
+}) {
+  const proposedLabel = formatBookingDate(proposedStart);
+  return (
+    <div
+      className="rounded-2xl px-4 py-3"
+      style={{
+        backgroundColor: "rgba(255,130,63,0.10)",
+        border: "1px solid rgba(255,130,63,0.55)",
+        boxShadow: `0 0 0 2px rgba(255,130,63,0.10)`,
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          aria-hidden
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 9999,
+            backgroundColor: ORANGE,
+            marginTop: 6,
+            flexShrink: 0,
+          }}
+        />
+        <div className="min-w-0 flex-1">
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 10.5,
+              fontWeight: 800,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: ORANGE,
+            }}
+          >
+            Reschedule requested
+          </div>
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 14.5,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              marginTop: 3,
+              letterSpacing: "-0.005em",
+              lineHeight: 1.35,
+            }}
+          >
+            {firstName} wants to reschedule to {proposedLabel}.
+          </div>
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 12.5,
+              color: MIDNIGHT,
+              opacity: 0.7,
+              marginTop: 4,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            Respond within {formatTimeLeft(timeLeftMs)}.
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <BannerSecondaryBtn>Counter-propose</BannerSecondaryBtn>
+        <BannerSecondaryBtn>Message {firstName}</BannerSecondaryBtn>
+      </div>
+    </div>
+  );
+}
+
+function BannerSecondaryBtn({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl py-2.5 transition-opacity active:opacity-70"
+      style={{
+        border: `1.5px solid ${MIDNIGHT}`,
+        backgroundColor: "transparent",
+        color: MIDNIGHT,
+        fontFamily: UI,
+        fontSize: 13,
+        fontWeight: 700,
+        letterSpacing: "-0.005em",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

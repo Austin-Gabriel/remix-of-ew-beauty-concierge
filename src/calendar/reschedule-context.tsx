@@ -21,15 +21,24 @@ import {
 
 export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";
 
+/**
+ * Who initiated the reschedule. Drives copy + which actions render in the
+ * detail page action bar:
+ *  - "outgoing": pro proposed, client must respond → pro sees Cancel request
+ *  - "incoming": client proposed, pro must respond → pro sees Accept/Decline
+ */
+export type ProposalDirection = "outgoing" | "incoming";
+
 export interface PendingReschedule {
   bookingId: string;
   clientLabel: string;
+  direction: ProposalDirection;
   originalStart: Date;
   originalDurationMin: number;
   proposedStart: Date;
   proposedDurationMin: number;
   createdAt: Date;
-  /** When the proposal auto-expires if the client doesn't respond. */
+  /** When the proposal auto-expires if the counterparty doesn't respond. */
   expiresAt: Date;
   status: ProposalStatus;
 }
@@ -61,7 +70,7 @@ interface RescheduleCtx {
   proposalFor: (bookingId: string) => PendingReschedule | null;
   /** Latest pending proposal across all bookings, if any. */
   latestPending: PendingReschedule | null;
-  /** Create or replace a proposal. */
+  /** Create or replace a proposal. Defaults to direction = "outgoing". */
   propose: (input: {
     bookingId: string;
     clientLabel: string;
@@ -69,12 +78,16 @@ interface RescheduleCtx {
     originalDurationMin: number;
     proposedStart: Date;
     proposedDurationMin: number;
+    /** Defaults to "outgoing". Pass "incoming" to model a client-initiated request. */
+    direction?: ProposalDirection;
     /** Optional override for the proposal lifetime (ms). */
     ttlMs?: number;
   }) => void;
-  /** Pro-side cancel before client responds. */
+  /** Cancel a pending proposal (pro-side cancel for outgoing, decline for incoming). */
   cancel: (bookingId: string) => void;
-  /** Dev/simulated client response. */
+  /** Clear ALL proposals (any direction, any status). Used by dev-state reset. */
+  clearAll: () => void;
+  /** Dev/simulated counterparty response. */
   simulateAccept: (bookingId: string) => void;
   simulateDecline: (bookingId: string) => void;
   simulateExpire: (bookingId: string) => void;
@@ -135,6 +148,7 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
     const entry: PendingReschedule = {
       bookingId: input.bookingId,
       clientLabel: input.clientLabel,
+      direction: input.direction ?? "outgoing",
       originalStart: input.originalStart,
       originalDurationMin: input.originalDurationMin,
       proposedStart: input.proposedStart,
@@ -160,6 +174,11 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
           : p,
       ),
     );
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setProposals([]);
+    setOverrides({});
   }, []);
 
   const simulateAccept = useCallback((bookingId: string) => {
@@ -218,6 +237,7 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
       latestPending,
       propose,
       cancel,
+      clearAll,
       simulateAccept,
       simulateDecline,
       simulateExpire,
@@ -230,6 +250,7 @@ export function RescheduleProvider({ children }: { children: ReactNode }) {
       latestPending,
       propose,
       cancel,
+      clearAll,
       simulateAccept,
       simulateDecline,
       simulateExpire,
@@ -250,6 +271,7 @@ export function useReschedule(): RescheduleCtx {
       latestPending: null,
       propose: () => {},
       cancel: () => {},
+      clearAll: () => {},
       simulateAccept: () => {},
       simulateDecline: () => {},
       simulateExpire: () => {},
