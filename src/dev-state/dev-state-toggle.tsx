@@ -100,6 +100,13 @@ const AVAILABILITIES: { value: DevAvailability; label: string; hint: string }[] 
   { value: "limited", label: "Limited", hint: "3 days only" },
 ];
 
+const RESCHEDULE_SIMS: { value: DevRescheduleSim; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Pending proposals run their TTL" },
+  { value: "accept", label: "Sim. accept", hint: "Client accepts the proposal" },
+  { value: "decline", label: "Sim. decline", hint: "Client declines — booking reverts" },
+  { value: "expire", label: "Sim. expire", hint: "Proposal times out" },
+];
+
 export function DevStateToggle() {
   const {
     enabled,
@@ -114,8 +121,10 @@ export function DevStateToggle() {
     setWeekDensity,
     setBlockedTime,
     setAvailability,
+    setRescheduleSim,
     reset,
   } = useDevState();
+  const reschedule = useReschedule();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -138,6 +147,22 @@ export function DevStateToggle() {
       setLifecycle("none");
     }
   }, [state.bookingSource, state.lifecycle, setLifecycle]);
+
+  // Reschedule sim bridge: fire the matching simulation on the latest pending
+  // proposal whenever the dev field flips away from "auto", then snap the
+  // field back to "auto" so the sim is a one-shot trigger.
+  useEffect(() => {
+    if (state.rescheduleSim === "auto") return;
+    const pending = reschedule.latestPending;
+    if (!pending) {
+      setRescheduleSim("auto");
+      return;
+    }
+    if (state.rescheduleSim === "accept") reschedule.simulateAccept(pending.bookingId);
+    else if (state.rescheduleSim === "decline") reschedule.simulateDecline(pending.bookingId);
+    else if (state.rescheduleSim === "expire") reschedule.simulateExpire(pending.bookingId);
+    setRescheduleSim("auto");
+  }, [state.rescheduleSim, reschedule, setRescheduleSim]);
 
   if (!mounted || !enabled) return null;
 
@@ -287,6 +312,17 @@ export function DevStateToggle() {
                 value={state.availability}
                 options={AVAILABILITIES}
                 onChange={(v) => setAvailability(v as DevAvailability)}
+              />
+              <Group
+                title="Reschedule state"
+                value={state.rescheduleSim}
+                options={RESCHEDULE_SIMS.map((r) => ({
+                  ...r,
+                  hint: reschedule.latestPending
+                    ? r.hint
+                    : `${r.hint} · no pending proposal`,
+                }))}
+                onChange={(v) => setRescheduleSim(v as DevRescheduleSim)}
               />
               <Group
                 title="Theme override"

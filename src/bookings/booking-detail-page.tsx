@@ -26,6 +26,8 @@ import {
   getBookingButtonState,
   type StartBookingButtonState,
 } from "@/lib/booking-button-state";
+import { useReschedule, formatTimeLeft } from "@/calendar/reschedule-context";
+import { RescheduleSheet } from "@/calendar/reschedule-sheet";
 
 /**
  * Canonical booking detail page. Reads from the canonical booking registry
@@ -44,10 +46,16 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
   const navigate = useNavigate();
   const search = useSearch({ from: "/bookings/$id" });
   const { state: dev, setLifecycle } = useDevState();
+  const reschedule = useReschedule();
   const booking = findBookingById(bookingId);
   const [status, setStatus] = useState<BookingStatus>(
     booking?.status ?? "cancelled",
   );
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const proposal = booking ? reschedule.proposalFor(booking.id) : null;
+  const pendingProposal = proposal?.status === "pending" ? proposal : null;
+  // Subscribe to the reschedule tick so the countdown re-renders.
+  void reschedule.tick;
 
   // Back navigation honors the referrer recorded when the pro tapped the
   // booking. Calendar restores its view + selected day; Bookings restores
@@ -111,6 +119,13 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
       <DetailHeader title="Booking" onBack={goBack} />
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-32 pt-2">
+        {pendingProposal ? (
+          <PendingRescheduleBanner
+            firstName={booking.clientName.split(" ")[0]}
+            timeLeftMs={pendingProposal.expiresAt.getTime() - Date.now()}
+            onCancel={() => reschedule.cancel(booking.id)}
+          />
+        ) : null}
         <HeroBlock booking={booking} status={status} />
         <ServiceCard booking={booking} dimmed={status === "cancelled"} />
         <LocationCard booking={booking} revealAddress={false} />
@@ -121,8 +136,17 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
         )}
         {status === "completed" ? <RatingCard booking={booking} /> : null}
         {booking.note ? <NotesCard note={booking.note} /> : null}
+        {(status === "confirmed" || status === "pending") && !pendingProposal ? (
+          <RescheduleEntryRow onClick={() => setRescheduleOpen(true)} />
+        ) : null}
         <PolicyLink />
       </div>
+
+      <RescheduleSheet
+        open={rescheduleOpen}
+        onClose={() => setRescheduleOpen(false)}
+        booking={booking}
+      />
 
       <DetailActionBar
         booking={booking}
@@ -137,6 +161,120 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
 
       <BottomTabsForDetail />
     </HomeShell>
+  );
+}
+
+function PendingRescheduleBanner({
+  firstName,
+  timeLeftMs,
+  onCancel,
+}: {
+  firstName: string;
+  timeLeftMs: number;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="rounded-2xl px-4 py-3"
+      style={{
+        backgroundColor: "rgba(255,130,63,0.10)",
+        border: "1px solid rgba(255,130,63,0.45)",
+        boxShadow: `0 0 0 2px rgba(255,130,63,0.10)`,
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          aria-hidden
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 9999,
+            backgroundColor: ORANGE,
+            marginTop: 6,
+            flexShrink: 0,
+          }}
+        />
+        <div className="min-w-0 flex-1">
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: "#7A2E0E",
+            }}
+          >
+            Pending reschedule
+          </div>
+          <div
+            style={{
+              fontFamily: UI,
+              fontSize: 14,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              marginTop: 2,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Awaiting {firstName}'s approval · {formatTimeLeft(timeLeftMs)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
+          style={{
+            border: "1px solid rgba(6,28,39,0.18)",
+            backgroundColor: "transparent",
+            color: MIDNIGHT,
+            fontFamily: UI,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Message {firstName}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl py-2.5 transition-opacity active:opacity-70"
+          style={{
+            border: "1px solid rgba(6,28,39,0.18)",
+            backgroundColor: "transparent",
+            color: MIDNIGHT,
+            fontFamily: UI,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Cancel request
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RescheduleEntryRow({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-1 self-center transition-opacity active:opacity-60"
+      style={{
+        fontFamily: UI,
+        fontSize: 13,
+        fontWeight: 600,
+        color: MIDNIGHT,
+        opacity: 0.75,
+        background: "transparent",
+        border: "none",
+        textDecoration: "underline",
+      }}
+    >
+      Reschedule this booking
+    </button>
   );
 }
 

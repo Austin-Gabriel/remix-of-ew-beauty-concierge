@@ -43,6 +43,8 @@ export interface BookingRowCardProps {
     onAccept: () => void;
     onDecline: () => void;
   };
+  /** Pending reschedule proposal — shows a small pill on the row. */
+  pendingReschedule?: { timeLeftLabel: string };
 }
 
 export function BookingRowCard(props: BookingRowCardProps) {
@@ -53,9 +55,9 @@ export function BookingRowCard(props: BookingRowCardProps) {
   );
 }
 
-function BookingRowCardInner({ booking, isNext, cancelled, onSelect, pending }: BookingRowCardProps) {
+function BookingRowCardInner({ booking, isNext, cancelled, onSelect, pending, pendingReschedule }: BookingRowCardProps) {
   const { cardSurface, cardBorder } = useHomeTheme();
-  const borderCol = isNext ? BAGEL_BORDER : cardBorder;
+  const borderCol = pendingReschedule ? "rgba(255,130,63,0.55)" : isNext ? BAGEL_BORDER : cardBorder;
   // Pending cards always behave as a button (taps the body to view detail)
   // even if no onSelect was passed — the inline action buttons below stop
   // propagation so they don't double-fire.
