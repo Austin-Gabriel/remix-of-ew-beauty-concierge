@@ -1243,7 +1243,7 @@ function DayOffPanel({
                   }}
                 >
                   <span style={{ fontFamily: UI, fontSize: 13, fontWeight: 600, color: CREAM }}>
-                    {bl.label ?? "Personal block"}
+                    {bl.reason ?? "Personal block"}
                   </span>
                   <span style={{ fontFamily: UI, fontSize: 12, color: CREAM, opacity: 0.7 }}>
                     {fmtTimeShort(bl.startsAt)}
