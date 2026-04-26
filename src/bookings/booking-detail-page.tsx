@@ -40,6 +40,7 @@ import { RescheduleSheet } from "@/calendar/reschedule-sheet";
 const UI = HOME_SANS;
 const ORANGE = "#FF823F";
 const MIDNIGHT = "#061C27";
+const CREAM = "#F0EBD8";
 const PLATFORM_FEE_PCT = 0.1;
 
 export function BookingDetailPage({ bookingId }: { bookingId: string }) {
@@ -186,6 +187,8 @@ function OutgoingRescheduleBanner({
   timeLeftMs: number;
   onCancel: () => void;
 }) {
+  const { isDark } = useHomeTheme();
+  const bodyColor = isDark ? CREAM : MIDNIGHT;
   return (
     <div
       className="rounded-2xl px-4 py-3"
@@ -225,7 +228,7 @@ function OutgoingRescheduleBanner({
               fontFamily: UI,
               fontSize: 14.5,
               fontWeight: 700,
-              color: MIDNIGHT,
+              color: bodyColor,
               marginTop: 3,
               letterSpacing: "-0.005em",
             }}
@@ -251,6 +254,8 @@ function IncomingRescheduleBanner({
   proposedStart: Date;
   timeLeftMs: number;
 }) {
+  const { isDark } = useHomeTheme();
+  const bodyColor = isDark ? CREAM : MIDNIGHT;
   const proposedLabel = formatBookingDate(proposedStart);
   return (
     <div
@@ -291,7 +296,7 @@ function IncomingRescheduleBanner({
               fontFamily: UI,
               fontSize: 14.5,
               fontWeight: 700,
-              color: MIDNIGHT,
+              color: bodyColor,
               marginTop: 3,
               letterSpacing: "-0.005em",
               lineHeight: 1.35,
@@ -303,7 +308,7 @@ function IncomingRescheduleBanner({
             style={{
               fontFamily: UI,
               fontSize: 12.5,
-              color: MIDNIGHT,
+              color: bodyColor,
               opacity: 0.7,
               marginTop: 4,
               fontVariantNumeric: "tabular-nums",
@@ -328,15 +333,17 @@ function BannerSecondaryBtn({
   children: React.ReactNode;
   onClick?: () => void;
 }) {
+  const { isDark } = useHomeTheme();
+  const fg = isDark ? CREAM : MIDNIGHT;
   return (
     <button
       type="button"
       onClick={onClick}
       className="rounded-xl py-2.5 transition-opacity active:opacity-70"
       style={{
-        border: `1.5px solid ${MIDNIGHT}`,
+        border: `1.5px solid ${fg}`,
         backgroundColor: "transparent",
-        color: MIDNIGHT,
+        color: fg,
         fontFamily: UI,
         fontSize: 13,
         fontWeight: 700,
