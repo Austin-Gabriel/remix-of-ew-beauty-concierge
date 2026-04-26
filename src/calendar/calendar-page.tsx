@@ -3183,7 +3183,7 @@ function SheetShell({
   );
 }
 
-function RescheduleSheetButton({
+function SheetButton({
   onClick,
   children,
   variant = "default",
@@ -3852,7 +3852,7 @@ function BlockTimeSheet({
             Pick a shorter block or a different time.
           </div>
           <div className="mt-3 flex gap-2">
-            <RescheduleSheetButton onClick={() => setPhase("edit")}>Pick another</SheetButton>
+            <SheetButton onClick={() => setPhase("edit")}>Pick another</SheetButton>
           </div>
         </div>
       ) : null}
@@ -3949,9 +3949,9 @@ function BufferSheet({
 
       {phase === "choose" ? (
         <div className="flex flex-col gap-2">
-          <RescheduleSheetButton onClick={() => apply(currentExtra + 15)}>Add 15 min</SheetButton>
-          <RescheduleSheetButton onClick={() => apply(currentExtra + 30)}>Add 30 min</SheetButton>
-          <RescheduleSheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
+          <SheetButton onClick={() => apply(currentExtra + 15)}>Add 15 min</SheetButton>
+          <SheetButton onClick={() => apply(currentExtra + 30)}>Add 30 min</SheetButton>
+          <SheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
           {currentExtra > 0 ? (
             <button
               type="button"
