@@ -42,6 +42,9 @@ interface CalendarEditsCtx {
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
+  /** Bumps on every commit / undo / redo. Lets the undo bubble reset its
+   *  auto-dismiss timer whenever a new edit happens. */
+  version: number;
 }
 
 const Ctx = createContext<CalendarEditsCtx | null>(null);
@@ -119,6 +122,16 @@ export function CalendarEditsProvider({ children }: { children: ReactNode }) {
     bumpHistory();
   }, [snapshot, bumpHistory]);
 
+  const [version, setVersion] = useState(0);
+  // Bump version on every commit / undo / redo so the UndoRedo bubble can
+  // reset its auto-dismiss timer when fresh edits land.
+  // (We piggyback on the existing bumpHistory call sites.)
+  // We do this by wrapping bumpHistory to also increment version.
+  const bumpHistoryAndVersion = useCallback(() => {
+    bumpHistory();
+    setVersion((v) => v + 1);
+  }, [bumpHistory]);
+
   const value = useMemo<CalendarEditsCtx>(
     () => ({
       blocks: snapshot.blocks,
@@ -129,10 +142,17 @@ export function CalendarEditsProvider({ children }: { children: ReactNode }) {
       setBufferExtension,
       canUndo: pastRef.current.length > 0,
       canRedo: futureRef.current.length > 0,
-      undo,
-      redo,
+      undo: () => {
+        undo();
+        bumpHistoryAndVersion();
+      },
+      redo: () => {
+        redo();
+        bumpHistoryAndVersion();
+      },
+      version,
     }),
-    [snapshot, addBlock, updateBlock, removeBlock, setBufferExtension, undo, redo],
+    [snapshot, addBlock, updateBlock, removeBlock, setBufferExtension, undo, redo, version, bumpHistoryAndVersion],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
