@@ -2080,7 +2080,6 @@ function MonthView({
         cols={[
           { value: String(monthStats.count), label: "Bookings" },
           { value: fmtUsd(monthStats.earnedUsd), label: "Earned" },
-          { value: `${monthStats.bookedPct}%`, label: "Booked", valueAccent: true },
         ]}
       />
     </div>
