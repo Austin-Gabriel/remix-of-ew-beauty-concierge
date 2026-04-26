@@ -1419,7 +1419,10 @@ function WeekStripAndDay({
             const circleBg = isHero ? ORANGE : "transparent";
             const circleBorder =
               isToday && !isHero ? `1.5px solid ${ORANGE}` : "1px solid transparent";
-            const circleFg = isHero ? MIDNIGHT : CREAM;
+            // Selected day chip uses navy on orange (legible in both modes).
+            // Non-selected uses the active theme's body text color so days
+            // stay visible whether the page is dark or light.
+            const circleFg = isHero ? MIDNIGHT : themeText;
             // Day off: mute both the initial and the date number when the
             // chip isn't actively selected. Selected day-off still reads
             // strong so the pro sees it's their current view.
