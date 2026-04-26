@@ -385,6 +385,8 @@ function pendingReschedulePropFor(
   if (!p || p.status !== "pending") return undefined;
   return { timeLeftLabel: formatTimeLeft(p.expiresAt.getTime() - Date.now()) };
 }
+
+function TodayHorizonGroup({
   bookings,
   onAccept,
   onDecline,
