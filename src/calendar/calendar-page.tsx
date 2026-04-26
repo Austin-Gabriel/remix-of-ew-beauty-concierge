@@ -826,9 +826,48 @@ function DayGridScroller({
   dayAv: AvailabilityRange[];
   children: React.ReactNode;
 }) {
-  const { gridStart, gridEnd, workStart, workEnd } = useGridRange();
-  void dayAv;
+  const { gridStart, gridEnd } = useGridRange();
   const totalHours = gridEnd - gridStart;
+
+  // Compute muted bands: union of (a) buffer hours on each side of the
+  // outermost work range, and (b) any non-working gap between consecutive
+  // availability ranges (e.g. a 12-2 PM lunch). Sorted ranges are required
+  // so consecutive `r → next` pairs read as gap-out / gap-in.
+  // Each band is in MINUTES from midnight, clamped to the rendered grid.
+  const mutedBands = useMemo<Array<{ startMin: number; endMin: number }>>(() => {
+    const gridStartMin = gridStart * 60;
+    const gridEndMin = gridEnd * 60;
+    const sorted = [...dayAv].sort((a, b) => a.startMin - b.startMin);
+    const bands: Array<{ startMin: number; endMin: number }> = [];
+
+    if (sorted.length === 0) {
+      // Day-off renders DayOffPanel instead of the grid, but if a caller
+      // still mounts this with an empty dayAv, mute the entire grid so it
+      // visually communicates "not work hours."
+      bands.push({ startMin: gridStartMin, endMin: gridEndMin });
+      return bands;
+    }
+
+    // Leading buffer: gridStart → first range start
+    if (sorted[0].startMin > gridStartMin) {
+      bands.push({ startMin: gridStartMin, endMin: sorted[0].startMin });
+    }
+    // Inter-range gaps
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const gapStart = sorted[i].endMin;
+      const gapEnd = sorted[i + 1].startMin;
+      if (gapEnd > gapStart) {
+        bands.push({ startMin: gapStart, endMin: gapEnd });
+      }
+    }
+    // Trailing buffer: last range end → gridEnd
+    const lastEnd = sorted[sorted.length - 1].endMin;
+    if (lastEnd < gridEndMin) {
+      bands.push({ startMin: lastEnd, endMin: gridEndMin });
+    }
+    return bands;
+  }, [dayAv, gridStart, gridEnd]);
+
   return (
     <div
       className="relative flex-1 overflow-y-auto"
@@ -838,30 +877,23 @@ function DayGridScroller({
         className="relative flex"
         style={{ height: totalHours * HOUR_HEIGHT_DAY }}
       >
-        {/* Outside-hours buffer tint — leading pad */}
-        {workStart != null ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-0 right-0 z-0"
-            style={{
-              top: 0,
-              height: (workStart - gridStart) * HOUR_HEIGHT_DAY,
-              backgroundColor: "rgba(6,28,39,0.45)",
-            }}
-          />
-        ) : null}
-        {/* Outside-hours buffer tint — trailing pad */}
-        {workEnd != null ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-0 right-0 z-0"
-            style={{
-              top: (workEnd - gridStart) * HOUR_HEIGHT_DAY,
-              height: (gridEnd - workEnd) * HOUR_HEIGHT_DAY,
-              backgroundColor: "rgba(6,28,39,0.45)",
-            }}
-          />
-        ) : null}
+        {/* Outside-hours / inter-range gap tint — single muted swatch per band */}
+        {mutedBands.map((band, i) => {
+          const topMin = band.startMin - gridStart * 60;
+          const heightMin = band.endMin - band.startMin;
+          return (
+            <div
+              key={`mute-${i}`}
+              aria-hidden
+              className="pointer-events-none absolute left-0 right-0 z-0"
+              style={{
+                top: (topMin / 60) * HOUR_HEIGHT_DAY,
+                height: (heightMin / 60) * HOUR_HEIGHT_DAY,
+                backgroundColor: "rgba(6,28,39,0.45)",
+              }}
+            />
+          );
+        })}
         {children}
       </div>
     </div>
