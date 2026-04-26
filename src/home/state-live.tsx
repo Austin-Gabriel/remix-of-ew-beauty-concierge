@@ -563,6 +563,29 @@ function UpNextCard({ booking, liveStatus }: { booking: Booking; liveStatus: Liv
           {booking.startsAt} {booking.startsAtMeridiem ?? ""} · {booking.durationMin} min
         </span>
       </div>
+      {pendingReschedule ? (
+        <div
+          className="mt-2 inline-flex items-center gap-1.5 self-start rounded-full"
+          style={{
+            backgroundColor: "rgba(255,130,63,0.16)",
+            color: "#FF823F",
+            padding: "4px 10px",
+            fontFamily: UI,
+            fontSize: 11.5,
+            fontWeight: 600,
+            letterSpacing: "-0.005em",
+            border: "1px solid rgba(255,130,63,0.55)",
+            width: "fit-content",
+          }}
+        >
+          <span
+            aria-hidden
+            className="rounded-full"
+            style={{ width: 6, height: 6, backgroundColor: ORANGE }}
+          />
+          Pending reschedule · {pendingReschedule.timeLeftLabel}
+        </div>
+      ) : null}
       <ClientLine booking={booking} />
       <AddressRow booking={booking} />
       <PrimaryAction label="Start navigation" icon="map" />
