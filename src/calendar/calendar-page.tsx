@@ -260,6 +260,7 @@ function CalendarPageInner() {
         ) : null}
       </div>
 
+      <PendingReschedulePill />
       <UndoRedoPill />
 
       <BottomTabs
