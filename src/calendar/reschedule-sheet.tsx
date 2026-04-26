@@ -37,6 +37,10 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   const override = reschedule.overrides[booking.id];
   const startsAt = override?.startsAt ?? booking.startsAt;
   const durationMin = override?.durationMin ?? booking.durationMin;
+  // The service's set duration — the source of truth for how long this
+  // service "should" take. Pros can deviate, but we surface the delta so
+  // it's a deliberate choice, not a side-effect of the time pickers.
+  const serviceDurationMin = booking.durationMin;
 
   const [date, setDate] = useState<Date>(() => {
     const d = new Date(startsAt);
@@ -46,8 +50,9 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
   const [startMin, setStartMin] = useState<number>(
     startsAt.getHours() * 60 + startsAt.getMinutes(),
   );
-  const [endMin, setEndMin] = useState<number>(
-    startsAt.getHours() * 60 + startsAt.getMinutes() + durationMin,
+  const [duration, setDuration] = useState<number>(durationMin);
+  const [adjustLengthOpen, setAdjustLengthOpen] = useState<boolean>(
+    durationMin !== serviceDurationMin,
   );
   const [reason, setReason] = useState<string>("");
   const [phase, setPhase] = useState<"edit" | "confirm">("edit");
