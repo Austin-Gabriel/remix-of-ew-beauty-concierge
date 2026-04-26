@@ -2351,6 +2351,148 @@ function BookingBlock({
   );
 }
 
+/* =====================================================================
+   PENDING RESCHEDULE — booking action sheet
+   Tapping a booking that's in the pending-reschedule state opens this
+   compact sheet with View details / Cancel request / Message.
+===================================================================== */
+function PendingActionSheet({
+  open,
+  onClose,
+  proposal,
+  onCancel,
+  onViewDetails,
+}: {
+  open: boolean;
+  onClose: () => void;
+  proposal: import("@/calendar/reschedule-context").PendingReschedule;
+  onCancel: () => void;
+  onViewDetails: () => void;
+}) {
+  if (!open) return null;
+  const firstName = proposal.clientLabel.split(" ")[0];
+  return (
+    <div
+      className="fixed inset-0 z-[80]"
+      style={{ fontFamily: UI }}
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+      />
+      <div
+        role="dialog"
+        aria-label="Pending reschedule actions"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute bottom-0 left-1/2 w-full max-w-md -translate-x-1/2 overflow-hidden rounded-t-3xl"
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid rgba(6,28,39,0.10)",
+          borderBottom: "none",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)",
+          animation: "ewa-sheet-up 280ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        <div className="flex justify-center pt-3">
+          <span
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 4,
+              backgroundColor: "rgba(6,28,39,0.18)",
+            }}
+          />
+        </div>
+        <div className="px-5 pb-2 pt-3">
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: "#7A2E0E",
+            }}
+          >
+            Pending reschedule
+          </div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: MIDNIGHT,
+              marginTop: 4,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Awaiting {firstName} ·{" "}
+            {formatTimeLeft(proposal.expiresAt.getTime() - Date.now())}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: MIDNIGHT,
+              opacity: 0.6,
+              marginTop: 4,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmtTimeShort(proposal.originalStart)} →{" "}
+            {fmtTimeShort(proposal.proposedStart)} · {proposal.proposedDurationMin}m
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
+          <SheetButton label="View details" onClick={onViewDetails} />
+          <SheetButton label={`Message ${firstName}`} onClick={onClose} />
+          <SheetButton
+            label="Cancel request"
+            onClick={onCancel}
+            variant="danger"
+          />
+        </div>
+      </div>
+      <style>{`
+        @keyframes ewa-sheet-up {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function SheetButton({
+  label,
+  onClick,
+  variant = "default",
+}: {
+  label: string;
+  onClick: () => void;
+  variant?: "default" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-xl py-3 text-left transition-opacity active:opacity-70"
+      style={{
+        backgroundColor:
+          variant === "danger" ? "rgba(220,38,38,0.08)" : "rgba(6,28,39,0.05)",
+        color: variant === "danger" ? "#B91C1C" : MIDNIGHT,
+        fontFamily: UI,
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: "-0.005em",
+        paddingLeft: 16,
+        paddingRight: 16,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function durationPill(min: number): string {
   if (min < 60) return `${min}m`;
   const h = Math.floor(min / 60);
