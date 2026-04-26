@@ -43,6 +43,7 @@ interface RescheduleCtx {
   /** Create or replace a proposal. */
   propose: (input: {
     bookingId: string;
+    clientLabel: string;
     originalStart: Date;
     originalDurationMin: number;
     proposedStart: Date;
