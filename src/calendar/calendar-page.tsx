@@ -733,7 +733,7 @@ function StatStrip({
 ===================================================================== */
 
 function HourGutter({ hourHeight }: { hourHeight: number }) {
-  const { text } = useHomeTheme();
+  const { text, isDark } = useHomeTheme();
   const { gridStart, gridEnd } = useGridRange();
   const hours: number[] = [];
   for (let h = gridStart; h <= gridEnd; h++) hours.push(h);
@@ -743,7 +743,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
       style={{
         width: GUTTER_W,
         flexShrink: 0,
-        borderRight: "1px solid rgba(240,235,216,0.06)",
+        borderRight: `1px solid ${isDark ? "rgba(240,235,216,0.08)" : "rgba(6,28,39,0.10)"}`,
       }}
     >
       {hours.map((h) => {
@@ -759,7 +759,7 @@ function HourGutter({ hourHeight }: { hourHeight: number }) {
               fontSize: 10,
               fontWeight: 500,
               color: text,
-              opacity: 0.5,
+              opacity: isDark ? 0.5 : 0.6,
               textAlign: "right",
               letterSpacing: "0.02em",
               fontVariantNumeric: "tabular-nums",
