@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Bell,
   MoreHorizontal,
@@ -92,16 +92,21 @@ export function CalendarPage() {
 function CalendarPageInner() {
   const { state: dev } = useDevState();
   const navigate = useNavigate();
+  const search = useSearch({ from: "/calendar" });
 
-  // Calendar always lands on Week. Per spec: "every time the pro enters the
-  // Calendar tab, they land on Week, regardless of what view they were on
-  // previously." No persistence.
-  const [view, setView] = useState<View>("week");
-  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  // Calendar always lands on Week unless the pro is returning from a
+  // booking detail page, in which case we restore their previous view +
+  // selected day so back navigation feels seamless.
+  const [view, setView] = useState<View>(() => search.view ?? "week");
+  const [anchor, setAnchor] = useState<Date>(() =>
+    search.day ? fromIsoDay(search.day) : new Date(),
+  );
   // The "hero" day inside Week view. Defaults to today; tapping a Week day
   // header changes it without navigating away. Tapping a Month cell sets
   // this AND switches to Week.
-  const [heroDay, setHeroDay] = useState<Date>(() => new Date());
+  const [heroDay, setHeroDay] = useState<Date>(() =>
+    search.day ? fromIsoDay(search.day) : new Date(),
+  );
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Sheets. blockSheet has two modes: "create" (start time + optional
