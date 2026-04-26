@@ -1737,7 +1737,25 @@ function BlockBlock({
    Tap-and-drag = open Block sheet pre-filled with the swept duration.
 ===================================================================== */
 function UndoRedoPill() {
-  const { canUndo, canRedo, undo, redo } = useCalendarEdits();
+  const { canUndo, canRedo, undo, redo, version } = useCalendarEdits();
+  const [dismissed, setDismissed] = useState(false);
+
+  // Reset dismissal whenever a new edit lands.
+  useEffect(() => {
+    setDismissed(false);
+  }, [version]);
+
+  // Auto-dismiss after 5s of inactivity (no further edits, no taps on
+  // Undo / Redo, no manual close). Each new `version` resets the timer
+  // because this effect re-runs.
+  useEffect(() => {
+    if (dismissed) return;
+    if (!canUndo && !canRedo) return;
+    const t = window.setTimeout(() => setDismissed(true), 5000);
+    return () => window.clearTimeout(t);
+  }, [version, dismissed, canUndo, canRedo]);
+
+  if (dismissed) return null;
   if (!canUndo && !canRedo) return null;
   return (
     <div
@@ -1745,7 +1763,7 @@ function UndoRedoPill() {
       style={{ fontFamily: UI }}
     >
       <div
-        className="pointer-events-auto flex items-center gap-1 rounded-full border px-1 py-1 shadow-lg"
+        className="pointer-events-auto flex items-center gap-1 rounded-full border py-1 pl-1 pr-1 shadow-lg"
         style={{
           backgroundColor: "rgba(6,28,39,0.92)",
           borderColor: "rgba(240,235,216,0.18)",
@@ -1778,6 +1796,28 @@ function UndoRedoPill() {
           style={{ letterSpacing: "-0.005em" }}
         >
           Redo ↷
+        </button>
+        <div
+          aria-hidden
+          style={{
+            width: 1,
+            height: 16,
+            backgroundColor: "rgba(240,235,216,0.18)",
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss"
+          className="flex items-center justify-center rounded-full transition-opacity active:opacity-60"
+          style={{
+            width: 24,
+            height: 24,
+            color: CREAM,
+            opacity: 0.7,
+          }}
+        >
+          <X size={12} strokeWidth={2.25} />
         </button>
       </div>
     </div>
