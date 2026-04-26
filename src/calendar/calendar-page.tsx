@@ -2443,8 +2443,8 @@ function PendingActionSheet({
           </div>
         </div>
         <div className="flex flex-col gap-2 px-4 pb-4 pt-2">
-          <SheetButton label="View details" onClick={onViewDetails} />
-          <SheetButton label={`Message ${firstName}`} onClick={onClose} />
+          <RescheduleSheetButton label="View details" onClick={onViewDetails} />
+          <RescheduleSheetButton label={`Message ${firstName}`} onClick={onClose} />
           <SheetButton
             label="Cancel request"
             onClick={onCancel}
@@ -2462,7 +2462,7 @@ function PendingActionSheet({
   );
 }
 
-function SheetButton({
+function RescheduleSheetButton({
   label,
   onClick,
   variant = "default",
@@ -3183,7 +3183,7 @@ function SheetShell({
   );
 }
 
-function SheetButton({
+function RescheduleSheetButton({
   onClick,
   children,
   variant = "default",
@@ -3852,7 +3852,7 @@ function BlockTimeSheet({
             Pick a shorter block or a different time.
           </div>
           <div className="mt-3 flex gap-2">
-            <SheetButton onClick={() => setPhase("edit")}>Pick another</SheetButton>
+            <RescheduleSheetButton onClick={() => setPhase("edit")}>Pick another</SheetButton>
           </div>
         </div>
       ) : null}
@@ -3949,9 +3949,9 @@ function BufferSheet({
 
       {phase === "choose" ? (
         <div className="flex flex-col gap-2">
-          <SheetButton onClick={() => apply(currentExtra + 15)}>Add 15 min</SheetButton>
-          <SheetButton onClick={() => apply(currentExtra + 30)}>Add 30 min</SheetButton>
-          <SheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
+          <RescheduleSheetButton onClick={() => apply(currentExtra + 15)}>Add 15 min</SheetButton>
+          <RescheduleSheetButton onClick={() => apply(currentExtra + 30)}>Add 30 min</SheetButton>
+          <RescheduleSheetButton onClick={() => setPhase("custom")}>Custom…</SheetButton>
           {currentExtra > 0 ? (
             <button
               type="button"
