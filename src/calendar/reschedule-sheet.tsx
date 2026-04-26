@@ -188,11 +188,17 @@ export function RescheduleSheet({ open, onClose, booking }: Props) {
                 </Popover>
               </Field>
 
-              {/* START TIME */}
+              {/* START TIME — editable like iPhone clock. Tap the hour or
+                  minute segment to type directly; ± steppers stay for quick nudges. */}
               <Field label="Start time">
                 <div className="flex items-center gap-2">
                   <Stepper onClick={() => adjustStart(-STEP)} ariaLabel="Earlier">−</Stepper>
-                  <TimeBox value={fmt(startMin)} />
+                  <EditableTime
+                    minutes={startMin}
+                    onChange={(m) =>
+                      setStartMin(Math.max(0, Math.min(24 * 60 - MIN_DUR, m)))
+                    }
+                  />
                   <Stepper onClick={() => adjustStart(STEP)} ariaLabel="Later">+</Stepper>
                 </div>
               </Field>
