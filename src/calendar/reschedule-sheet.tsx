@@ -430,6 +430,153 @@ function Stepper({
   );
 }
 
+/**
+ * iPhone-clock-style editable time field. Hour and minute are tappable
+ * segments backed by hidden number inputs; AM/PM is a toggle. Commits on
+ * blur or Enter so partial typing doesn't churn parent state.
+ */
+function EditableTime({
+  minutes,
+  onChange,
+}: {
+  minutes: number;
+  onChange: (next: number) => void;
+}) {
+  const h24 = Math.floor(minutes / 60);
+  const mm = minutes % 60;
+  const isPm = h24 >= 12;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+
+  const [hourStr, setHourStr] = useState(String(h12));
+  const [minStr, setMinStr] = useState(String(mm).padStart(2, "0"));
+
+  // Keep local strings in sync when parent updates (steppers, reset, etc.)
+  const lastMinutesRef = useRef(minutes);
+  if (lastMinutesRef.current !== minutes) {
+    lastMinutesRef.current = minutes;
+    setHourStr(String(h12));
+    setMinStr(String(mm).padStart(2, "0"));
+  }
+
+  const commit = (nextH12Str: string, nextMmStr: string, pm: boolean) => {
+    let h = parseInt(nextH12Str, 10);
+    let m = parseInt(nextMmStr, 10);
+    if (Number.isNaN(h)) h = h12;
+    if (Number.isNaN(m)) m = mm;
+    h = Math.max(1, Math.min(12, h));
+    m = Math.max(0, Math.min(59, m));
+    const h24Next = (h % 12) + (pm ? 12 : 0);
+    onChange(h24Next * 60 + m);
+  };
+
+  const togglePm = () => {
+    const nextPm = !isPm;
+    commit(hourStr, minStr, nextPm);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: 38,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    fontFamily: UI,
+    fontSize: 18,
+    fontWeight: 700,
+    color: MIDNIGHT,
+    textAlign: "center",
+    fontVariantNumeric: "tabular-nums",
+    letterSpacing: "-0.01em",
+    padding: 0,
+    // Hide spin buttons
+    appearance: "textfield",
+    MozAppearance: "textfield",
+  } as React.CSSProperties;
+
+  return (
+    <div
+      className="flex flex-1 items-center justify-center rounded-xl"
+      style={{
+        backgroundColor: "rgba(6,28,39,0.04)",
+        border: "1px solid rgba(6,28,39,0.12)",
+        height: 48,
+        gap: 2,
+      }}
+    >
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={12}
+        value={hourStr}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setHourStr(e.target.value.replace(/\D/g, "").slice(0, 2))}
+        onBlur={() => commit(hourStr, minStr, isPm)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+        }}
+        aria-label="Hour"
+        style={inputStyle}
+      />
+      <span
+        style={{
+          fontFamily: UI,
+          fontSize: 18,
+          fontWeight: 700,
+          color: MIDNIGHT,
+        }}
+      >
+        :
+      </span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={59}
+        value={minStr}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setMinStr(e.target.value.replace(/\D/g, "").slice(0, 2))}
+        onBlur={() => {
+          const padded = minStr === "" ? "00" : minStr.padStart(2, "0");
+          setMinStr(padded);
+          commit(hourStr, padded, isPm);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+        }}
+        aria-label="Minute"
+        style={inputStyle}
+      />
+      <button
+        type="button"
+        onClick={togglePm}
+        aria-label="Toggle AM or PM"
+        style={{
+          marginLeft: 6,
+          padding: "4px 10px",
+          borderRadius: 8,
+          border: "1px solid rgba(6,28,39,0.18)",
+          background: "rgba(6,28,39,0.04)",
+          fontFamily: UI,
+          fontSize: 13,
+          fontWeight: 700,
+          color: MIDNIGHT,
+          cursor: "pointer",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {isPm ? "PM" : "AM"}
+      </button>
+      <style>{`
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function TimeBox({ value }: { value: string }) {
   return (
     <div
