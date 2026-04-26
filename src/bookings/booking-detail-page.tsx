@@ -119,6 +119,13 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
       <DetailHeader title="Booking" onBack={goBack} />
 
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-32 pt-2">
+        {pendingProposal ? (
+          <PendingRescheduleBanner
+            firstName={booking.clientName.split(" ")[0]}
+            timeLeftMs={pendingProposal.expiresAt.getTime() - Date.now()}
+            onCancel={() => reschedule.cancel(booking.id)}
+          />
+        ) : null}
         <HeroBlock booking={booking} status={status} />
         <ServiceCard booking={booking} dimmed={status === "cancelled"} />
         <LocationCard booking={booking} revealAddress={false} />
@@ -129,8 +136,17 @@ export function BookingDetailPage({ bookingId }: { bookingId: string }) {
         )}
         {status === "completed" ? <RatingCard booking={booking} /> : null}
         {booking.note ? <NotesCard note={booking.note} /> : null}
+        {(status === "confirmed" || status === "pending") && !pendingProposal ? (
+          <RescheduleEntryRow onClick={() => setRescheduleOpen(true)} />
+        ) : null}
         <PolicyLink />
       </div>
+
+      <RescheduleSheet
+        open={rescheduleOpen}
+        onClose={() => setRescheduleOpen(false)}
+        booking={booking}
+      />
 
       <DetailActionBar
         booking={booking}
