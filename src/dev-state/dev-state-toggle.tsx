@@ -9,6 +9,9 @@ import {
   type DevDayContext,
   type DevLifecycle,
   type DevBookingSource,
+  type DevPayoutState,
+  type DevPendingBalance,
+  type DevTaxDocs,
   type DevWeekDensity,
   type DevBlockedTime,
   type DevAvailability,
@@ -19,8 +22,10 @@ import { ALL_BOOKINGS } from "@/data/mock-bookings";
 
 /**
  * Floating dev-only state toggle. Pinned bottom-right, above the bottom
- * tab bar. Tapping opens a slide-up panel with three radio groups:
- * Pro State, Data Density, Theme Override. Selections persist via
+ * tab bar. Tapping opens a slide-up panel with radio groups for pro state,
+ * data density, theme, mode, day context, lifecycle, booking source,
+ * earnings sub-axes, and calendar sub-axes (density / blocked time /
+ * availability / reschedule render state). Selections persist via
  * localStorage so they survive reloads in the session.
  */
 
@@ -77,6 +82,28 @@ const BOOKING_SOURCES: { value: DevBookingSource; label: string; hint: string }[
   { value: "scheduled", label: "Scheduled", hint: "Get Ready shows Leave by behavior" },
 ];
 
+const PAYOUT_STATES: { value: DevPayoutState; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Active verified account" },
+  { value: "none", label: "No payout method", hint: "Bank not connected yet" },
+  { value: "active", label: "Active", hint: "Verified, payouts flowing" },
+  { value: "pending", label: "Pending verification", hint: "Awaiting bank confirm" },
+  { value: "failed-recent", label: "Recent failed payout", hint: "Last payout bounced" },
+];
+
+const PENDING_BALANCES: { value: DevPendingBalance; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "From mock earnings" },
+  { value: "zero", label: "$0 pending", hint: "Nothing in transit" },
+  { value: "small", label: "Small ($50–200)", hint: "A few completed bookings" },
+  { value: "large", label: "Large ($1,000+)", hint: "Big week" },
+];
+
+const TAX_DOC_STATES: { value: DevTaxDocs; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "From mock earnings history" },
+  { value: "none", label: "None ready", hint: "Below threshold or new pro" },
+  { value: "current-year", label: "Current year ready", hint: "One 1099-K available" },
+  { value: "multi-year", label: "Multi-year history", hint: "Several years of docs" },
+];
+
 const WEEK_DENSITIES: { value: DevWeekDensity; label: string; hint: string }[] = [
   { value: "auto", label: "Auto", hint: "Use mock data as-is" },
   { value: "empty", label: "Empty week", hint: "No bookings" },
@@ -101,10 +128,6 @@ const AVAILABILITIES: { value: DevAvailability; label: string; hint: string }[] 
   { value: "limited", label: "Limited", hint: "3 days only" },
 ];
 
-/**
- * Reschedule render states. The bridge effect below translates the
- * selection into proposals on the focus booking (RESCHEDULE_FOCUS_ID).
- */
 const RESCHEDULE_STATES: { value: DevRescheduleState; label: string; hint: string }[] = [
   { value: "none", label: "None", hint: "Confirmed booking, no pending state" },
   { value: "pending-out", label: "Pending out", hint: "Pro proposed; client must respond" },
@@ -114,7 +137,6 @@ const RESCHEDULE_STATES: { value: DevRescheduleState; label: string; hint: strin
   { value: "expired", label: "Expired", hint: "Proposal timed out" },
 ];
 
-/** Stable focus booking for reschedule simulation — Maya, today, confirmed. */
 const RESCHEDULE_FOCUS_ID = "b1";
 
 export function DevStateToggle() {
@@ -128,6 +150,9 @@ export function DevStateToggle() {
     setDayContext,
     setLifecycle,
     setBookingSource,
+    setPayoutState,
+    setPendingBalance,
+    setTaxDocs,
     setWeekDensity,
     setBlockedTime,
     setAvailability,
@@ -140,7 +165,6 @@ export function DevStateToggle() {
 
   useEffect(() => setMounted(true), []);
 
-  // Lock body scroll when open
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -150,8 +174,6 @@ export function DevStateToggle() {
     };
   }, [open]);
 
-  // Scheduled bookings can't enter Get Ready — clear the lifecycle if the
-  // source flips while Get Ready is active.
   useEffect(() => {
     if (state.bookingSource === "scheduled" && state.lifecycle === "get-ready") {
       setLifecycle("none");
@@ -160,9 +182,7 @@ export function DevStateToggle() {
 
   // Reschedule render-state bridge. Translates the chosen state into
   // proposals on the focus booking so every reschedule-aware surface
-  // (calendar grid, detail page, bookings list) re-renders in sync.
-  // Re-runs only when the chosen state changes — not on every reschedule
-  // tick — so we don't fight ourselves.
+  // re-renders in sync.
   useEffect(() => {
     const focus = ALL_BOOKINGS.find((b) => b.id === RESCHEDULE_FOCUS_ID);
     if (!focus) return;
@@ -172,8 +192,6 @@ export function DevStateToggle() {
       return;
     }
 
-    // Build a "proposed" slot offset from the original by +2 hours so the
-    // ghost and the proposed block are clearly distinguishable on the grid.
     const proposedStart = new Date(focus.startsAt);
     proposedStart.setHours(proposedStart.getHours() + 2);
     const baseInput = {
@@ -194,7 +212,6 @@ export function DevStateToggle() {
     } else if (state.rescheduleState === "approved") {
       reschedule.clearAll();
       reschedule.propose({ ...baseInput, direction: "outgoing" });
-      // Resolve on next tick so the propose() commit lands first.
       setTimeout(() => reschedule.simulateAccept(focus.id), 0);
     } else if (state.rescheduleState === "declined") {
       reschedule.clearAll();
@@ -205,8 +222,6 @@ export function DevStateToggle() {
       reschedule.propose({ ...baseInput, direction: "outgoing" });
       setTimeout(() => reschedule.simulateExpire(focus.id), 0);
     }
-    // Intentionally only depend on the dev-state value — `reschedule` is a
-    // fresh object every render and would re-fire the effect endlessly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.rescheduleState]);
 
@@ -214,7 +229,6 @@ export function DevStateToggle() {
 
   return (
     <>
-      {/* Floating button */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -245,10 +259,8 @@ export function DevStateToggle() {
         />
       </button>
 
-      {/* Slide-up panel */}
       {open && (
         <div className="fixed inset-0 z-[70]" style={{ fontFamily: SANS }}>
-          {/* Backdrop */}
           <button
             type="button"
             aria-label="Close dev panel"
@@ -257,7 +269,6 @@ export function DevStateToggle() {
             style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
           />
 
-          {/* Sheet */}
           <div
             role="dialog"
             aria-label="Dev state toggle"
@@ -270,7 +281,6 @@ export function DevStateToggle() {
               animation: "ewa-sheet-up 320ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
           >
-            {/* Grabber */}
             <div className="flex justify-center pt-3">
               <span style={{ width: 36, height: 4, borderRadius: 4, backgroundColor: "rgba(240,235,216,0.18)" }} />
             </div>
@@ -341,6 +351,28 @@ export function DevStateToggle() {
                 options={DATA_STATES}
                 onChange={(v) => setDataDensity(v as DevDataDensity)}
               />
+              {state.proState === "live" || state.proState === "auto" ? (
+                <>
+                  <Group
+                    title="Earnings · payout state"
+                    value={state.payoutState}
+                    options={PAYOUT_STATES}
+                    onChange={(v) => setPayoutState(v as DevPayoutState)}
+                  />
+                  <Group
+                    title="Earnings · pending balance"
+                    value={state.pendingBalance}
+                    options={PENDING_BALANCES}
+                    onChange={(v) => setPendingBalance(v as DevPendingBalance)}
+                  />
+                  <Group
+                    title="Earnings · tax docs"
+                    value={state.taxDocs}
+                    options={TAX_DOC_STATES}
+                    onChange={(v) => setTaxDocs(v as DevTaxDocs)}
+                  />
+                </>
+              ) : null}
               <Group
                 title="Density (calendar)"
                 value={state.weekDensity}

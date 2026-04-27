@@ -181,6 +181,10 @@ function HomePage() {
               navigate({ to: "/calendar" });
               return;
             }
+            if (k === "earnings") {
+              navigate({ to: "/earnings" });
+              return;
+            }
             setActiveTab(k);
           }}
           badge={

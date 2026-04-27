@@ -46,7 +46,27 @@ export type DevLifecycle =
  */
 export type DevBookingSource = "auto" | "on-demand" | "scheduled";
 
-/* ---- Calendar-only dev fields ---- */
+/* ---- Earnings sub-axes ---- */
+
+/**
+ * Earnings sub-axes. Only meaningful when proState resolves to "live" — for
+ * non-live pro states, Earnings is gated upstream (locked or empty waiting).
+ * Each field maps to a downstream surface: payoutState → /earnings/payout-method,
+ * pendingBalance → Earnings home pending card + in-transit payout amount,
+ * taxDocs → /earnings/tax-documents.
+ */
+export type DevPayoutState =
+  | "auto"
+  | "none"
+  | "active"
+  | "pending"
+  | "failed-recent";
+
+export type DevPendingBalance = "auto" | "zero" | "small" | "large";
+
+export type DevTaxDocs = "auto" | "none" | "current-year" | "multi-year";
+
+/* ---- Calendar sub-axes ---- */
 
 /**
  * Density of bookings to render across the visible calendar range.
@@ -84,17 +104,6 @@ export type DevAvailabilityOverride = Record<
  * shows for the focus booking (calendar grid block, booking detail page,
  * bookings list row). Setting this seeds or clears proposals on the
  * focus booking so all surfaces re-render in sync.
- *
- *  - "none"        → no pending state; booking renders normally
- *  - "pending-out" → pro proposed; outgoing banner + ghost + pending ring
- *  - "pending-in"  → client proposed; incoming banner + Accept/Decline bar
- *  - "approved"    → counterparty accepted; renders post-acceptance state
- *  - "declined"    → counterparty declined; renders original / declined state
- *  - "expired"     → proposal timed out; same end state as declined
- *
- * The dev bridge (DevStateToggle) translates this into proposals on a
- * stable focus booking ("b1"). Pros never see a Reschedule state radio
- * group in real UI — this is dev-only scaffolding.
  */
 export type DevRescheduleState =
   | "none"
@@ -112,6 +121,9 @@ export interface DevState {
   dayContext: DevDayContext;
   lifecycle: DevLifecycle;
   bookingSource: DevBookingSource;
+  payoutState: DevPayoutState;
+  pendingBalance: DevPendingBalance;
+  taxDocs: DevTaxDocs;
   weekDensity: DevWeekDensity;
   blockedTime: DevBlockedTime;
   availability: DevAvailability;
@@ -127,6 +139,9 @@ const DEFAULT_STATE: DevState = {
   dayContext: "auto",
   lifecycle: "none",
   bookingSource: "auto",
+  payoutState: "auto",
+  pendingBalance: "auto",
+  taxDocs: "auto",
   weekDensity: "auto",
   blockedTime: "auto",
   availability: "auto",
@@ -146,6 +161,9 @@ interface Ctx {
   setDayContext: (v: DevDayContext) => void;
   setLifecycle: (v: DevLifecycle) => void;
   setBookingSource: (v: DevBookingSource) => void;
+  setPayoutState: (v: DevPayoutState) => void;
+  setPendingBalance: (v: DevPendingBalance) => void;
+  setTaxDocs: (v: DevTaxDocs) => void;
   setWeekDensity: (v: DevWeekDensity) => void;
   setBlockedTime: (v: DevBlockedTime) => void;
   setAvailability: (v: DevAvailability) => void;
@@ -154,13 +172,10 @@ interface Ctx {
   reset: () => void;
 }
 
-
 const DevStateContext = createContext<Ctx | null>(null);
 
 function readEnabled(): boolean {
   if (typeof window === "undefined") return false;
-  // Pre-launch: always on. Opt-out with ?dev=0 or localStorage "ewa.devTools"="0".
-  // Before shipping to real users, re-gate this to import.meta.env.DEV only.
   try {
     const url = new URL(window.location.href);
     if (url.searchParams.get("dev") === "0") return false;
@@ -208,6 +223,9 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
   const setDayContext = useCallback((v: DevDayContext) => setState((s) => ({ ...s, dayContext: v })), []);
   const setLifecycle = useCallback((v: DevLifecycle) => setState((s) => ({ ...s, lifecycle: v })), []);
   const setBookingSource = useCallback((v: DevBookingSource) => setState((s) => ({ ...s, bookingSource: v })), []);
+  const setPayoutState = useCallback((v: DevPayoutState) => setState((s) => ({ ...s, payoutState: v })), []);
+  const setPendingBalance = useCallback((v: DevPendingBalance) => setState((s) => ({ ...s, pendingBalance: v })), []);
+  const setTaxDocs = useCallback((v: DevTaxDocs) => setState((s) => ({ ...s, taxDocs: v })), []);
   const setWeekDensity = useCallback((v: DevWeekDensity) => setState((s) => ({ ...s, weekDensity: v })), []);
   const setBlockedTime = useCallback((v: DevBlockedTime) => setState((s) => ({ ...s, blockedTime: v })), []);
   const setAvailability = useCallback((v: DevAvailability) => setState((s) => ({ ...s, availability: v })), []);
@@ -223,12 +241,45 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
-      enabled, state,
-      setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource,
-      setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState,
+      enabled,
+      state,
+      setProState,
+      setDataDensity,
+      setTheme,
+      setMode,
+      setDayContext,
+      setLifecycle,
+      setBookingSource,
+      setPayoutState,
+      setPendingBalance,
+      setTaxDocs,
+      setWeekDensity,
+      setBlockedTime,
+      setAvailability,
+      setAvailabilityOverride,
+      setRescheduleState,
       reset,
     }),
-    [enabled, state, setProState, setDataDensity, setTheme, setMode, setDayContext, setLifecycle, setBookingSource, setWeekDensity, setBlockedTime, setAvailability, setAvailabilityOverride, setRescheduleState, reset],
+    [
+      enabled,
+      state,
+      setProState,
+      setDataDensity,
+      setTheme,
+      setMode,
+      setDayContext,
+      setLifecycle,
+      setBookingSource,
+      setPayoutState,
+      setPendingBalance,
+      setTaxDocs,
+      setWeekDensity,
+      setBlockedTime,
+      setAvailability,
+      setAvailabilityOverride,
+      setRescheduleState,
+      reset,
+    ],
   );
 
   return <DevStateContext.Provider value={value}>{children}</DevStateContext.Provider>;
@@ -247,6 +298,9 @@ export function useDevState(): Ctx {
       setDayContext: () => {},
       setLifecycle: () => {},
       setBookingSource: () => {},
+      setPayoutState: () => {},
+      setPendingBalance: () => {},
+      setTaxDocs: () => {},
       setWeekDensity: () => {},
       setBlockedTime: () => {},
       setAvailability: () => {},

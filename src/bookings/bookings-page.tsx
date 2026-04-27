@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { HomeShell, useHomeTheme, HOME_SANS } from "@/home/home-shell";
 import { BottomTabs } from "@/home/bottom-tabs";
 import { ActiveBookingStrip } from "@/components/active-booking-strip";
+import { OnlineModeStrip } from "@/components/online-mode-strip";
 import { useDevState } from "@/dev-state/dev-state-context";
 import { LifecycleBody } from "@/bookings/lifecycle/lifecycle-surface";
 import { formatUsd, type Booking } from "@/data/mock-data";
@@ -40,6 +41,7 @@ export function BookingsPage({
   const isInProgressTab = tab === "in-progress";
   return (
     <HomeShell>
+      <OnlineModeStrip hide={isInProgressTab} />
       <ActiveBookingStrip hide={isInProgressTab} />
       <PageHeader />
       <TabBar tab={tab} onSelect={onTabChange} />
@@ -66,6 +68,7 @@ function BottomTabsForBookings() {
         if (k === "home") navigate({ to: "/home" });
         if (k === "bookings") navigate({ to: "/bookings" });
         if (k === "calendar") navigate({ to: "/calendar" });
+        if (k === "earnings") navigate({ to: "/earnings" });
       }}
     />
   );
@@ -427,7 +430,7 @@ function TodayHorizonGroup({
     <BookingsGroup>
       <BookingsSectionHeader
         title="Today"
-        meta={`${bookings.length} ${bookings.length === 1 ? "booking" : "bookings"} · ${formatUsd(totalUsd)}`}
+        meta={`${bookings.length} ${bookings.length === 1 ? "booking" : "bookings"} — ${formatUsd(totalUsd)}`}
         date={currentDateLabel()}
       />
       <BookingTimeline entries={entries} />
@@ -697,5 +700,5 @@ function currentDateLabel(d: Date = new Date()): string {
   const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
   const month = d.toLocaleDateString(undefined, { month: "short" });
   const day = d.getDate();
-  return `${weekday} · ${month} ${day}`;
+  return `${weekday}, ${month} ${day}`;
 }
