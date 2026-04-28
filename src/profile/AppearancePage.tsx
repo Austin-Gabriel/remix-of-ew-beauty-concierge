@@ -144,7 +144,6 @@ export function LanguagePage() {
               ) : (
                 <span
                   style={{
-                    fontFamily: '"Fraunces", Times, serif',
                     color: "var(--eb-fg-muted)",
                     fontSize: 14,
                   }}

@@ -69,7 +69,7 @@ export function CustomerViewModal({ open, onOpenChange, profile }: Props) {
           {profile.rating != null && (profile.reviewCount ?? 0) > 0 ? (
             <div className="mt-2 flex items-center gap-1.5">
               <Star size={14} fill="currentColor" style={{ color: "var(--eb-orange)" }} />
-              <span style={{ fontFamily: '"Fraunces", Times, serif', fontWeight: 500 }}>
+              <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                 {profile.rating!.toFixed(1)}
               </span>
               <span className="text-[13px]" style={{ color: "var(--eb-fg-muted)" }}>

@@ -161,10 +161,11 @@ export function ReviewsStubPage() {
         <Star size={20} fill="currentColor" style={{ color: "var(--eb-orange)" }} />
         <span
           style={{
-            fontFamily: '"Fraunces", Times, serif',
             fontSize: 36,
-            fontWeight: 500,
+            fontWeight: 700,
             color: "var(--eb-fg)",
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "-0.02em",
           }}
         >
           {rating.toFixed(1)}
