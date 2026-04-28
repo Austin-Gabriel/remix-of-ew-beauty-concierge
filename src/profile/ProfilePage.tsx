@@ -9,6 +9,7 @@ import { CustomerViewModal } from "@/profile/components/CustomerViewModal";
 import { useProfile } from "@/profile/hooks/useProfile";
 import { useT } from "@/profile/i18n/SettingsI18nProvider";
 import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
+import { HomeShell } from "@/home/home-shell";
 import {
   Scissors,
   Image as ImageIcon,
@@ -61,15 +62,16 @@ export function ProfilePage() {
       : profile.socials.map((s) => s.handle).join(" · ");
 
   return (
-    <div
-      className="min-h-screen w-full"
-      style={{
-        backgroundColor: "var(--eb-bg)",
-        color: "var(--eb-fg)",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)",
-      }}
-    >
+    <HomeShell noTabBarSpacing>
+      <div
+        className="min-h-screen w-full"
+        style={{
+          backgroundColor: "var(--eb-bg)",
+          color: "var(--eb-fg)",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)",
+        }}
+      >
       <ProfileHeader hasUnread={profile.hasUnreadNotifications} />
 
       <IdentityCard
@@ -159,6 +161,7 @@ export function ProfilePage() {
 
       <ProfileBottomTabs />
     </div>
+    </HomeShell>
   );
 }
 
