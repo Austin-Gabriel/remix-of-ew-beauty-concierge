@@ -28,6 +28,7 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as BiometricRouteImport } from './routes/biometric'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProfileIndexRouteImport } from './routes/profile.index'
 import { Route as SignupServicesRouteImport } from './routes/signup.services'
 import { Route as ProfileSocialsRouteImport } from './routes/profile.socials'
 import { Route as ProfileServicesRouteImport } from './routes/profile.services'
@@ -152,6 +153,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRoute,
 } as any)
 const SignupServicesRoute = SignupServicesRouteImport.update({
   id: '/services',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/profile/services': typeof ProfileServicesRoute
   '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
+  '/profile/': typeof ProfileIndexRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
   '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
@@ -370,7 +377,6 @@ export interface FileRoutesByTo {
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
-  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -395,6 +401,7 @@ export interface FileRoutesByTo {
   '/profile/services': typeof ProfileServicesRoute
   '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
+  '/profile': typeof ProfileIndexRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
   '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
@@ -446,6 +453,7 @@ export interface FileRoutesById {
   '/profile/services': typeof ProfileServicesRoute
   '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
+  '/profile/': typeof ProfileIndexRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
   '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
@@ -498,6 +506,7 @@ export interface FileRouteTypes {
     | '/profile/services'
     | '/profile/socials'
     | '/signup/services'
+    | '/profile/'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
     | '/profile/settings/appearance'
@@ -523,7 +532,6 @@ export interface FileRouteTypes {
     | '/kyc'
     | '/login'
     | '/onboarding'
-    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -548,6 +556,7 @@ export interface FileRouteTypes {
     | '/profile/services'
     | '/profile/socials'
     | '/signup/services'
+    | '/profile'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
     | '/profile/settings/appearance'
@@ -598,6 +607,7 @@ export interface FileRouteTypes {
     | '/profile/services'
     | '/profile/socials'
     | '/signup/services'
+    | '/profile/'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
     | '/profile/settings/appearance'
@@ -768,6 +778,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof ProfileRoute
     }
     '/signup/services': {
       id: '/signup/services'
@@ -1053,6 +1070,7 @@ interface ProfileRouteChildren {
   ProfileReviewsRoute: typeof ProfileReviewsRoute
   ProfileServicesRoute: typeof ProfileServicesRoute
   ProfileSocialsRoute: typeof ProfileSocialsRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
   ProfileSettingsAppearanceRoute: typeof ProfileSettingsAppearanceRoute
   ProfileSettingsChangePasswordRoute: typeof ProfileSettingsChangePasswordRoute
   ProfileSettingsEditPortfolioRoute: typeof ProfileSettingsEditPortfolioRoute
@@ -1072,6 +1090,7 @@ const ProfileRouteChildren: ProfileRouteChildren = {
   ProfileReviewsRoute: ProfileReviewsRoute,
   ProfileServicesRoute: ProfileServicesRoute,
   ProfileSocialsRoute: ProfileSocialsRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
   ProfileSettingsAppearanceRoute: ProfileSettingsAppearanceRoute,
   ProfileSettingsChangePasswordRoute: ProfileSettingsChangePasswordRoute,
   ProfileSettingsEditPortfolioRoute: ProfileSettingsEditPortfolioRoute,
