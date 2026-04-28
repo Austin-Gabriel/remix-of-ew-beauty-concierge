@@ -285,6 +285,19 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
     (v: DevRescheduleState) => setState((s) => ({ ...s, rescheduleState: v })),
     [],
   );
+  const setProfileCompleteness = useCallback(
+    (v: DevProfileCompleteness) => setState((s) => ({ ...s, profileCompleteness: v })),
+    [],
+  );
+  const setProfileVerification = useCallback(
+    (v: DevProfileVerification) => setState((s) => ({ ...s, profileVerification: v })),
+    [],
+  );
+  const setProfileSection = useCallback(
+    (key: keyof DevProfileSections, value: boolean) =>
+      setState((s) => ({ ...s, profileSections: { ...s.profileSections, [key]: value } })),
+    [],
+  );
   const reset = useCallback(() => setState(DEFAULT_STATE), []);
 
   const value = useMemo<Ctx>(
