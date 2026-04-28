@@ -15,6 +15,7 @@ import { Route as SplashRouteImport } from './routes/splash'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KycRouteImport } from './routes/kyc'
@@ -88,6 +89,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -149,9 +155,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileIndexRoute = ProfileIndexRouteImport.update({
-  id: '/profile/',
-  path: '/profile/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRoute,
 } as any)
 const SignupServicesRoute = SignupServicesRouteImport.update({
   id: '/services',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -421,6 +428,7 @@ export interface FileRoutesById {
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -473,6 +481,7 @@ export interface FileRouteTypes {
     | '/kyc'
     | '/login'
     | '/onboarding'
+    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -573,6 +582,7 @@ export interface FileRouteTypes {
     | '/kyc'
     | '/login'
     | '/onboarding'
+    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -624,13 +634,13 @@ export interface RootRouteChildren {
   KycRoute: typeof KycRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
+  ProfileRoute: typeof ProfileRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignInRoute: typeof SignInRoute
   SignupRoute: typeof SignupRouteWithChildren
   SplashRoute: typeof SplashRoute
   VerifyRoute: typeof VerifyRoute
   WelcomeRoute: typeof WelcomeRoute
-  ProfileIndexRoute: typeof ProfileIndexRoute
   ApiPublicSeedDemoRoute: typeof ApiPublicSeedDemoRoute
 }
 
@@ -676,6 +686,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -764,10 +781,10 @@ declare module '@tanstack/react-router' {
     }
     '/profile/': {
       id: '/profile/'
-      path: '/profile'
+      path: '/'
       fullPath: '/profile/'
       preLoaderRoute: typeof ProfileIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ProfileRoute
     }
     '/signup/services': {
       id: '/signup/services'
@@ -1045,6 +1062,49 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
   OnboardingRouteChildren,
 )
 
+interface ProfileRouteChildren {
+  ProfileAccountSettingsRoute: typeof ProfileAccountSettingsRoute
+  ProfileAvailabilityRoute: typeof ProfileAvailabilityRoute
+  ProfileHelpAndSupportRoute: typeof ProfileHelpAndSupportRoute
+  ProfilePayoutsAndBankingRoute: typeof ProfilePayoutsAndBankingRoute
+  ProfileReviewsRoute: typeof ProfileReviewsRoute
+  ProfileServicesRoute: typeof ProfileServicesRoute
+  ProfileSocialsRoute: typeof ProfileSocialsRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
+  ProfileSettingsAppearanceRoute: typeof ProfileSettingsAppearanceRoute
+  ProfileSettingsChangePasswordRoute: typeof ProfileSettingsChangePasswordRoute
+  ProfileSettingsEditPortfolioRoute: typeof ProfileSettingsEditPortfolioRoute
+  ProfileSettingsEditProfileRoute: typeof ProfileSettingsEditProfileRoute
+  ProfileSettingsHowItWorksRoute: typeof ProfileSettingsHowItWorksRoute
+  ProfileSettingsLanguageRoute: typeof ProfileSettingsLanguageRoute
+  ProfileSettingsNotificationsRoute: typeof ProfileSettingsNotificationsRoute
+  ProfileSettingsPrivacyRoute: typeof ProfileSettingsPrivacyRoute
+  ProfileSettingsTermsOfServiceRoute: typeof ProfileSettingsTermsOfServiceRoute
+}
+
+const ProfileRouteChildren: ProfileRouteChildren = {
+  ProfileAccountSettingsRoute: ProfileAccountSettingsRoute,
+  ProfileAvailabilityRoute: ProfileAvailabilityRoute,
+  ProfileHelpAndSupportRoute: ProfileHelpAndSupportRoute,
+  ProfilePayoutsAndBankingRoute: ProfilePayoutsAndBankingRoute,
+  ProfileReviewsRoute: ProfileReviewsRoute,
+  ProfileServicesRoute: ProfileServicesRoute,
+  ProfileSocialsRoute: ProfileSocialsRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
+  ProfileSettingsAppearanceRoute: ProfileSettingsAppearanceRoute,
+  ProfileSettingsChangePasswordRoute: ProfileSettingsChangePasswordRoute,
+  ProfileSettingsEditPortfolioRoute: ProfileSettingsEditPortfolioRoute,
+  ProfileSettingsEditProfileRoute: ProfileSettingsEditProfileRoute,
+  ProfileSettingsHowItWorksRoute: ProfileSettingsHowItWorksRoute,
+  ProfileSettingsLanguageRoute: ProfileSettingsLanguageRoute,
+  ProfileSettingsNotificationsRoute: ProfileSettingsNotificationsRoute,
+  ProfileSettingsPrivacyRoute: ProfileSettingsPrivacyRoute,
+  ProfileSettingsTermsOfServiceRoute: ProfileSettingsTermsOfServiceRoute,
+}
+
+const ProfileRouteWithChildren =
+  ProfileRoute._addFileChildren(ProfileRouteChildren)
+
 interface SignupRouteChildren {
   SignupServicesRoute: typeof SignupServicesRoute
 }
@@ -1069,13 +1129,13 @@ const rootRouteChildren: RootRouteChildren = {
   KycRoute: KycRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
+  ProfileRoute: ProfileRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SignInRoute: SignInRoute,
   SignupRoute: SignupRouteWithChildren,
   SplashRoute: SplashRoute,
   VerifyRoute: VerifyRoute,
   WelcomeRoute: WelcomeRoute,
-  ProfileIndexRoute: ProfileIndexRoute,
   ApiPublicSeedDemoRoute: ApiPublicSeedDemoRoute,
 }
 export const routeTree = rootRouteImport
