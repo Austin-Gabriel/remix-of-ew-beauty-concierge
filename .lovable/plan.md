@@ -1,116 +1,53 @@
-## The problem
+## Goal
 
-The whole `/src/profile/` domain runs a parallel design system that has nothing to do with the rest of the app:
+Make the Settings page header match the rest of the app (Bookings / Earnings style — one main title, no subtitle), match the reference screenshot, and ensure every piece of text is visible in both light and dark mode.
 
-| | Rest of app (Home / Bookings / Earnings / Calendar) | Profile + Settings today |
-|---|---|---|
-| Shell | `HomeShell` — cream `#F0EBD8` light / midnight `#061C27` dark, drifting squiggles, paper grain | Solid `var(--eb-bg)` with no shell |
-| Theme | Honors dev theme toggle (light / dark / system) | Hard-forced `data-theme="dark"` everywhere |
-| Cards | Pure WHITE `#FFFFFF` + navy `#061C27` text, `1px solid rgba(6,28,39,0.10)`, `12px` radius, soft shadow (per `mem://design/card-surfaces`) | `var(--eb-surface)` (off-white in light, dark navy in dark), `14–18px` radius |
-| Page header | 22px navy "Bookings" / "Earnings" inside `HomeShell` | 28px Uncut Sans on a different bg, gear → `/profile/account-settings` (legacy) |
-| Settings layout | n/a — no other page uses iOS list rows | iOS-style "01 / 02 / 03" indices with letter chapter markers `A / B / C / D`, big 22px row labels, full-bleed dividers — used **nowhere else in the app** |
-| Font | `Uncut Sans` only; serif (`Fraunces`) is logo-only per `mem://index.md` | Fraunces leaks into rating numbers (Reviews stub, CustomerView, Language native names) |
-| Accent chips | None — orange is reserved for the single primary action per screen (per `mem://design/orange-discipline`) | Every settings row gets a peach-soft icon chip, breaking the one-orange rule |
-| Bottom tabs | `BottomTabs` rendered by every working surface | Profile renders `ProfileBottomTabs`; subpages have none (correct), but Settings page also has none which is inconsistent with reachability |
+## Reference behavior
 
-The visual gap is large enough that opening Profile feels like a different app.
+- **Bookings header** (`src/bookings/bookings-page.tsx` lines 79–97): single 22px bold title, left-aligned, color from `useHomeTheme().text` (cream on dark, navy on light). No subtitle, no descriptive paragraph.
+- **Reference screenshot**: subpage-style header with back chevron on the left, centered "Settings" title, then white cards on the dark midnight background. **No second big "Settings" h2 and no descriptive paragraph below.**
 
-## What we'll change
+## Problems found
 
-All work stays inside `/src/profile/` and `/src/routes/profile.*` — no other domains, no shared folders, no STRUCTURE.md.
+1. `src/profile/SettingsPage.tsx` renders **two** title areas:
+   - the sticky subpage header with centered "Settings" (correct, matches screenshot)
+   - a second `<h2>Settings</h2>` with a descriptive paragraph "Manage your account, preferences, and how Ewà Biz works for you." (does NOT match — needs to go).
+2. The same descriptive paragraph hard-codes `color: var(--eb-fg)` with `opacity: 0.6` — fine in theory, but `--eb-fg` on the **app shell chrome** is cream (`#F0EBD8`) in dark mode and navy (`#061C27`) in light mode, which works only because `HomeShell` is the parent. Confirm contrast still works after removal of paragraph.
+3. The "App version" footer row uses the same pattern — keep, it's fine.
+4. `SettingsRow` (`src/profile/components/SettingsRow.tsx`) hard-codes `NAVY = #061C27` for label text and `NAVY_MUTED = rgba(6,28,39,0.55)` for sublabel/icon. This is correct **inside the white cards** (cards are pure white in both themes per `mem://design/card-surfaces`), so it stays.
+5. The `Right` / `RightAccent` helpers in `SettingsPage.tsx` are rendered **inside** white-card rows, so navy-muted is correct there too. No change needed.
+6. `SubpageShell` already uses `var(--eb-bg)` / `var(--eb-fg)` so it themes correctly.
+7. Profile page (`ProfilePage.tsx`) header is already a clean single 22px title via `ProfileHeader.tsx` — matches Bookings. No subtitle. **No change needed.** (User reference is Profile page, which is already correct — Settings is the one that needs to match it.)
+8. Bookings page header is already the canonical pattern — no change.
 
-### 1. Adopt `HomeShell` everywhere in profile
+## Changes
 
-`ProfilePage`, `SettingsPage`, and `SubpageShell` all wrap their body in `<HomeShell>` so they sit on the same cream/midnight surface as Home / Bookings / Earnings, honor the dev `Light / Dark / System` toggle, and inherit `Uncut Sans`. Drop the `data-theme="dark"` overrides and the manual safe-area padding (HomeShell already does it).
+### `src/profile/SettingsPage.tsx`
+- Delete the entire second-title block (lines ~174–192): the `<div className="px-4 pt-4 pb-2">…</div>` containing the duplicate `<h2>Settings</h2>` and the descriptive `<p>` paragraph.
+- The sticky subpage header with back chevron + centered "Settings" stays — it matches the screenshot.
+- The first `<SectionLabel>Account</SectionLabel>` will then be the first content under the header, matching the screenshot's "Signed in as / Change password / 2FA" first card.
+- Switch the `SettingsLoadingBlock` skeleton bars from hard-coded `rgba(6,28,39,0.08)` (invisible on white cards is fine, but the *card itself* is white-on-midnight which works) — keep as is; only the wrapping `pt` spacing needs a small bump now that the title block is gone.
 
-### 2. Replace `var(--eb-*)` tokens with the HomeShell palette
+### `src/profile/SettingsPage.tsx` — header polish
+- The sticky header currently uses `var(--eb-bg)` for background. In dark mode this is midnight (`#061C27`), in light mode cream (`#F0EBD8`) — both have visible chevron + title via `var(--eb-fg)`. Verified correct.
+- Add a top spacer (`pt-4`) directly above the first `<SectionLabel>` so the cards don't sit flush against the header divider.
 
-Inside profile components, read colors from `useHomeTheme()`:
-- Page text / chrome borders → `text`, `borderCol`, `borderSoft`
-- Cards → wrap card content in `<CardTheme>` and use `cardSurface` (white), `cardText` (navy `#061C27`), `cardBorder` (`rgba(6,28,39,0.10)`)
-- Single accent → `#FF823F` only on the one primary action per screen (Save in Edit Profile, Update password, Add a service, Connect)
-
-We keep `var(--eb-*)` defined in `styles.css` for backward-compat but stop reading them in profile components.
-
-### 3. Rewrite the card primitives
-
-| Component | Change |
-|---|---|
-| `IdentityCard.tsx` | White card, navy text, soft shadow `0 1px 2px rgba(6,28,39,0.06), 0 8px 24px -12px rgba(6,28,39,0.18)`. Keep peach-soft monogram (it's the Pro's own avatar, not a UI accent). Pencil button → outlined navy. Match screenshot reference. |
-| `SectionCard.tsx` | White card, hairline `rgba(6,28,39,0.10)`, navy children. Removes the cream-tinted look. |
-| `SectionLabel.tsx` | Navy at 0.55 opacity, 11px uppercase, 0.06em tracking — same eyebrow style as `CardEyebrow` in earnings. |
-| `SettingsRow.tsx` | Navy text on white. Drop the orange-soft icon chip (use a 28px navy-stroke icon at 0.55 opacity, no fill). Chevron stays muted navy. Active press = `rgba(6,28,39,0.04)`. |
-| `SubpageShell.tsx` | Render inside `<HomeShell noTabBarSpacing>`. Sticky header becomes a thin navy/cream bar with the same back button style used in booking detail (`ChevronLeft 22px` + bare title). Body sits on the page bg, not on `var(--eb-bg)`. |
-
-### 4. Rebuild `SettingsPage` to match the rest of the app
-
-Drop the `A / B / C / D` chapter markers and the `01 / 02 / …` numeric indices — they appear nowhere else and read like a different product. Replace with the same pattern the rest of the app uses:
-
-- `SectionLabel` ("Account", "Preferences", "Money", "About") — same eyebrow style as Earnings sections
-- `SectionCard` containing standard `SettingsRow` items
-- "Sign out" and "Delete Ewà Biz account" become the standard secondary / destructive button pair (transparent fill, navy / red border, full-width)
-- Email footer stays
-- Page is wrapped in `HomeShell`, no forced dark theme
-
-### 5. Drop Fraunces from profile
-
-Replace the three Fraunces usages with `Uncut Sans` semibold + tabular-nums:
-- `StubPages.tsx` Reviews rating headline
-- `CustomerViewModal.tsx` rating display
-- `AppearancePage.tsx` / Language picker native-name preview
-
-Per `mem://index.md`: serif is wordmark-only.
-
-### 6. Pull orange back to one anchor per screen
-
-Remove the orange icon chips from every `SettingsRow`. The one orange element on each screen becomes:
-- Profile main: `Connect` link on the Social row when no socials are linked (otherwise no orange — chevron is enough)
-- Settings: `Setup` action on the Payouts row when no bank is connected
-- Edit Profile: the `Save` button when dirty
-- Change Password: the `Update password` filled button
-- Services stub: the `Add a service` filled button
-- Socials stub: a single `Connect` filled chip on the active platform
-
-### 7. Settings header → keep it consistent
-
-The Profile gear icon already routes to `/profile/account-settings` (which renders `SettingsPage`). We won't migrate the URL — that's out of scope for this pass. The visual pass will make the destination feel like the same app.
-
-## Files that change
-
-```text
-src/profile/
-  ProfilePage.tsx                # wrap in HomeShell, drop data-theme="dark"
-  SettingsPage.tsx               # drop A/B/C/D chapter UI, restyle rows, wrap in HomeShell
-  EditProfilePage.tsx            # navy/white tokens
-  ChangePasswordPage.tsx         # navy/white tokens
-  AppearancePage.tsx             # navy/white tokens, drop Fraunces
-  StubPages.tsx                  # navy/white tokens, drop Fraunces, single orange CTA
-  components/
-    ProfileHeader.tsx            # navy outlined buttons, match Bookings header
-    IdentityCard.tsx             # white card + navy text + soft shadow
-    SectionCard.tsx              # white surface
-    SectionLabel.tsx             # navy 0.55 opacity eyebrow
-    SettingsRow.tsx              # drop peach icon chip, navy stroke icon
-    SubpageShell.tsx             # wrap in HomeShell, theme-aware header
-    CustomerViewModal.tsx        # navy/white tokens, drop Fraunces
-```
-
-`useProfile.ts`, the i18n provider, route files, and the demo data in `/src/data/` are unchanged.
-
-## What we don't touch (scope lock)
-
-- `/src/home/`, `/src/bookings/`, `/src/calendar/`, `/src/earnings/`, `/src/auth/`, `/src/onboarding*/`, `/src/components/`, `/src/hooks/`, `/src/lib/`, `/src/styles/`, `/src/data/` (no profile-only mocks need editing)
-- `STRUCTURE.md`
-- `src/styles.css` (the `--eb-*` tokens stay defined for back-compat with anything we miss)
-- Route files (no URL changes; gear still goes to `/profile/account-settings`)
+### No changes to
+- `src/profile/ProfilePage.tsx` (header already matches Bookings pattern)
+- `src/profile/components/ProfileHeader.tsx` (already a single 22px title)
+- `src/profile/components/IdentityCard.tsx` (white card, navy text — already correct in both themes)
+- `src/profile/components/SectionCard.tsx`, `SectionLabel.tsx`, `SettingsRow.tsx` (already theme-correct: white cards always, navy text inside cards always)
+- `src/bookings/bookings-page.tsx` (already the canonical header)
+- `src/styles.css` (tokens already set for both themes)
 
 ## Verification
 
-1. `bun run build` — zero TypeScript errors expected
-2. Open `/profile` in light and dark — page bg matches Home/Bookings/Earnings, IdentityCard is a white card on cream/midnight, ratings render in Uncut Sans tabular-nums, only one orange element when applicable
-3. Open `/profile/account-settings` — same page bg as Profile, white grouped cards with simple labeled sections, no `01 / 02` indices, no `A B C D` chapters
-4. Open each subpage (`/profile/settings/edit-profile`, `…/notifications`, `…/language`, `…/appearance`, `…/privacy`, `…/change-password`, `/profile/services`, `/profile/availability`, `/profile/socials`, `/profile/payouts-and-banking`, `/profile/help-and-support`, `/profile/settings/how-it-works`, `/profile/settings/terms-of-service`) — all sit on HomeShell, all use white cards + navy text, no Fraunces, single orange action per page
+After the edit, on `/profile/account-settings`:
+- Light mode: cream page background, navy back chevron + centered "Settings" title, white cards with navy rows and muted-navy sublabels. Matches screenshot if user toggles light.
+- Dark mode (default per screenshot): midnight page, cream chevron + centered cream "Settings" title, white cards with navy rows. Matches screenshot exactly.
+- No duplicate "Settings" title, no descriptive paragraph.
+- Bottom "Sign out" / "Delete" buttons inherit `var(--eb-fg)` — visible in both themes (already correct).
 
-## Deliverables
+## Files touched
 
-A Profile + Settings surface that's visually indistinguishable from Home / Bookings / Earnings in chrome, palette, typography, and card system, while keeping every existing route, button handler, toast, and persistence behavior working.
+- `src/profile/SettingsPage.tsx` (single edit: remove the duplicate-title block, adjust top spacing)
