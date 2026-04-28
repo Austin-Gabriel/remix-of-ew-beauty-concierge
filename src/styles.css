@@ -185,20 +185,6 @@
 }
 
 :root {
-  /* Ewà Biz semantic tokens — unified with the rest of the app.
-     Page bg = cream (#F0EBD8). Cards = pure WHITE. Text = navy (#061C27).
-     Hairline = rgba(6,28,39,0.10). See mem://design/card-surfaces. */
-  --eb-bg: #F0EBD8;                                    /* cream page (matches HomeShell) */
-  --eb-surface: #FFFFFF;                                /* white card */
-  --eb-surface-2: rgba(6, 28, 39, 0.06);                /* pressed / muted chip */
-  --eb-fg: #061C27;                                     /* navy ink */
-  --eb-fg-muted: rgba(6, 28, 39, 0.55);                 /* sublabel */
-  --eb-hairline: rgba(6, 28, 39, 0.10);
-  --eb-orange: #FF823F;                                 /* brand accent — one per screen */
-  --eb-orange-soft: rgba(255, 130, 63, 0.14);
-  --eb-success: #15803D;
-  --eb-danger: #B91C1C;
-
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -234,20 +220,7 @@
   --sidebar-ring: oklch(0.704 0.04 256.788);
 }
 
-.dark, [data-theme="dark"] {
-  /* Ewà Biz dark — midnight page, but cards stay PURE WHITE with navy text
-     to match the rest of the app (mem://design/card-surfaces). */
-  --eb-bg: #061C27;                                    /* midnight page */
-  --eb-surface: #FFFFFF;                                /* white card (same as light) */
-  --eb-surface-2: rgba(240, 235, 216, 0.06);            /* pressed on midnight chrome */
-  --eb-fg: #F0EBD8;                                     /* cream ink on midnight chrome */
-  --eb-fg-muted: rgba(240, 235, 216, 0.60);
-  --eb-hairline: rgba(240, 235, 216, 0.10);
-  --eb-orange: #FF823F;
-  --eb-orange-soft: rgba(255, 130, 63, 0.18);
-  --eb-success: #16A34A;
-  --eb-danger: #DC2626;
-
+.dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);

@@ -185,10 +185,6 @@ function HomePage() {
               navigate({ to: "/earnings" });
               return;
             }
-            if (k === "profile") {
-              navigate({ to: "/profile" });
-              return;
-            }
             setActiveTab(k);
           }}
           badge={
