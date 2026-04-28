@@ -15,10 +15,10 @@ export function ProfilePage() {
   const [customerViewOpen, setCustomerViewOpen] = useState(false);
 
   const minPriceLabel = useMemo(() => {
-    // Mock: $80 starting price when there are services configured.
-    if (data.services.length === 0) return null;
-    return "from $80";
-  }, [data.services.length]);
+    if (data.serviceMenu.length === 0) return null;
+    const min = Math.min(...data.serviceMenu.map((s) => s.priceUsd));
+    return `from $${min}`;
+  }, [data.serviceMenu]);
 
   const socialsConnected = [
     data.instagram ? "Instagram" : null,
@@ -36,8 +36,8 @@ export function ProfilePage() {
           <Row
             label="Services & pricing"
             sub={
-              data.services.length > 0
-                ? `${data.services.length} services · ${minPriceLabel}`
+              data.serviceMenu.length > 0
+                ? `${data.serviceMenu.length} services · ${minPriceLabel}`
                 : "Add Services to get bookings"
             }
             to="/profile/services"

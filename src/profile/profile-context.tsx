@@ -32,6 +32,28 @@ export interface PrivacyPrefs {
   messagePolicy: MessagePolicy;
 }
 
+/** Structured service item: name (must be from VALID_SERVICES), duration in minutes, price in USD. */
+export interface ServiceItem {
+  id: string;
+  name: string;
+  durationMin: number;
+  priceUsd: number;
+}
+
+/** Weekly availability — one window per day. `closed` = day off. */
+export interface DayWindow {
+  closed: boolean;
+  start: string; // "HH:MM" 24h
+  end: string;   // "HH:MM" 24h
+}
+export type WeeklyAvailability = Record<DayKey, DayWindow>;
+export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export const DAY_ORDER: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const DAY_LABEL: Record<DayKey, string> = {
+  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+  fri: "Friday", sat: "Saturday", sun: "Sunday",
+};
+
 export interface ProfileData {
   // Identity
   fullName?: string;
@@ -44,12 +66,16 @@ export interface ProfileData {
   avatarDataUrl?: string;
   coverDataUrl?: string;
   // Storefront
-  services: string[];          // chosen Service slugs (max 10 valid set)
+  /** Legacy: list of service names (display only). Source of truth is `serviceMenu`. */
+  services: string[];
+  serviceMenu: ServiceItem[];
   portfolio: string[];         // image data URLs
   // Reviews aggregate (mock)
   rating?: number;
   reviewCount?: number;
-  // Availability summary text (real schedule lives elsewhere)
+  // Availability
+  availability: WeeklyAvailability;
+  /** Derived/legacy summary string. Kept for backward-compat with existing UI. */
   availabilitySummary?: string;
   // Payouts
   bankName?: string;
@@ -101,6 +127,24 @@ const DEFAULT_PRIVACY: PrivacyPrefs = {
   messagePolicy: "anyone",
 };
 
+const DEFAULT_AVAILABILITY: WeeklyAvailability = {
+  mon: { closed: true, start: "10:00", end: "19:00" },
+  tue: { closed: false, start: "10:00", end: "19:00" },
+  wed: { closed: false, start: "10:00", end: "19:00" },
+  thu: { closed: false, start: "10:00", end: "19:00" },
+  fri: { closed: false, start: "10:00", end: "19:00" },
+  sat: { closed: false, start: "10:00", end: "19:00" },
+  sun: { closed: true, start: "10:00", end: "17:00" },
+};
+
+const DEFAULT_SERVICE_MENU: ServiceItem[] = [
+  { id: "svc-silk", name: "Silk press", durationMin: 120, priceUsd: 120 },
+  { id: "svc-knotless", name: "Knotless braids", durationMin: 360, priceUsd: 280 },
+  { id: "svc-box", name: "Box braids", durationMin: 300, priceUsd: 240 },
+  { id: "svc-corn", name: "Cornrows", durationMin: 90, priceUsd: 80 },
+  { id: "svc-trim", name: "Trim", durationMin: 30, priceUsd: 35 },
+];
+
 export const DEFAULT_PROFILE: ProfileData = {
   fullName: "Amara Johnson",
   tagline: "Brooklyn-based stylist focused on textured hair and protective styles.",
@@ -109,10 +153,12 @@ export const DEFAULT_PROFILE: ProfileData = {
   baseAddress: "123 Putnam Ave, Brooklyn, NY",
   travelRadiusMi: 10,
   yearsExperience: 6,
-  services: ["Silk press", "Knotless braids", "Box braids", "Cornrows", "Trim"],
+  services: DEFAULT_SERVICE_MENU.map((s) => s.name),
+  serviceMenu: DEFAULT_SERVICE_MENU,
   portfolio: [],
   rating: 4.9,
   reviewCount: 47,
+  availability: DEFAULT_AVAILABILITY,
   availabilitySummary: "Tue–Sat · 10 AM – 7 PM",
   bankName: undefined,
   bankLast4: undefined,
@@ -170,7 +216,15 @@ function read(): ProfileData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PROFILE;
-    return { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as ProfileData) };
+    const parsed = JSON.parse(raw) as Partial<ProfileData>;
+    return {
+      ...DEFAULT_PROFILE,
+      ...parsed,
+      notifications: { ...DEFAULT_PROFILE.notifications, ...(parsed.notifications ?? {}) },
+      privacy: { ...DEFAULT_PROFILE.privacy, ...(parsed.privacy ?? {}) },
+      availability: { ...DEFAULT_PROFILE.availability, ...(parsed.availability ?? {}) },
+      serviceMenu: parsed.serviceMenu ?? DEFAULT_PROFILE.serviceMenu,
+    };
   } catch {
     return DEFAULT_PROFILE;
   }
