@@ -6,9 +6,8 @@ interface Props {
 }
 
 /**
- * Card wrapper around a vertical stack of SettingsRow children.
- * Auto-renders a hairline divider between rows, inset 56px on the left
- * to align under the label text (not under the icon).
+ * White card with hairline divider between rows. Navy text is enforced
+ * inside child rows (SettingsRow, etc.) — see mem://design/card-surfaces.
  */
 export function SectionCard({ children }: Props) {
   const items = Children.toArray(children);
@@ -16,9 +15,12 @@ export function SectionCard({ children }: Props) {
     <div
       className="mx-4 overflow-hidden"
       style={{
-        backgroundColor: "var(--eb-surface)",
-        borderRadius: 14,
-        border: "1px solid var(--eb-hairline)",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        border: "1px solid rgba(6,28,39,0.10)",
+        boxShadow:
+          "0 1px 2px rgba(6,28,39,0.06), 0 8px 24px -12px rgba(6,28,39,0.18)",
+        color: "#061C27",
       }}
     >
       {items.map((child, i) => (
@@ -27,8 +29,8 @@ export function SectionCard({ children }: Props) {
           {i < items.length - 1 ? (
             <div
               aria-hidden
-              className="pointer-events-none absolute right-0 bottom-0 left-[56px] h-px"
-              style={{ backgroundColor: "var(--eb-hairline)" }}
+              className="pointer-events-none absolute right-4 bottom-0 left-4 h-px"
+              style={{ backgroundColor: "rgba(6,28,39,0.08)" }}
             />
           ) : null}
         </div>
