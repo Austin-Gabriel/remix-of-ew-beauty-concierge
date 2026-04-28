@@ -171,28 +171,8 @@ export function SettingsPage() {
         <h1 className="absolute left-1/2 -translate-x-1/2 text-[16px] font-semibold">Settings</h1>
       </header>
 
-      <div className="px-4 pt-4 pb-2">
-        <h2
-          className="font-semibold tracking-tight"
-          style={{
-            color: "var(--eb-fg)",
-            fontSize: 22,
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Settings
-        </h2>
-        <p
-          className="mt-1 text-[14px]"
-          style={{ color: "var(--eb-fg)", opacity: 0.6, maxWidth: 280 }}
-        >
-          Manage your account, preferences, and how Ewà Biz works for you.
-        </p>
-      </div>
-
       {profile.loading ? (
-        <div className="px-4 pb-8">
+        <div className="px-4 pt-4 pb-8">
           <SettingsLoadingBlock />
         </div>
       ) : (
