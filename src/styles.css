@@ -185,6 +185,19 @@
 }
 
 :root {
+  /* Ewà Biz semantic tokens — Apple Settings architecture.
+     Reference these as var(--eb-*) in components. Never hardcode hex. */
+  --eb-bg: oklch(0.97 0.012 95);                       /* cream page */
+  --eb-surface: oklch(1 0 0);                           /* card surface */
+  --eb-surface-2: oklch(0.94 0.01 95);                  /* icon chip / pressed */
+  --eb-fg: oklch(0.22 0.03 240);                        /* near-navy ink */
+  --eb-fg-muted: oklch(0.55 0.02 240);                  /* sublabel grey */
+  --eb-hairline: oklch(0.22 0.03 240 / 0.10);
+  --eb-orange: oklch(0.72 0.18 48);                     /* brand CTA */
+  --eb-orange-soft: oklch(0.72 0.18 48 / 0.12);
+  --eb-success: oklch(0.68 0.15 152);
+  --eb-danger: oklch(0.62 0.22 25);
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
