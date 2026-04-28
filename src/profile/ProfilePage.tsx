@@ -62,15 +62,16 @@ export function ProfilePage() {
       : profile.socials.map((s) => s.handle).join(" · ");
 
   return (
-    <div
-      className="min-h-screen w-full"
-      style={{
-        backgroundColor: "var(--eb-bg)",
-        color: "var(--eb-fg)",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)",
-      }}
-    >
+    <HomeShell noTabBarSpacing>
+      <div
+        className="min-h-screen w-full"
+        style={{
+          backgroundColor: "var(--eb-bg)",
+          color: "var(--eb-fg)",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)",
+        }}
+      >
       <ProfileHeader hasUnread={profile.hasUnreadNotifications} />
 
       <IdentityCard
