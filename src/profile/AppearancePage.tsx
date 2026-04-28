@@ -311,13 +311,15 @@ export function PrivacyPage() {
       <SectionCard>
         <ToggleRow
           label="Show neighborhood publicly"
-          value={showLocation}
-          onChange={setShowLocation}
+          value={prefs.showLocation}
+          onChange={update("showLocation", "Show neighborhood publicly")}
+          disabled={!hydrated}
         />
         <ToggleRow
           label="Show direct contact"
-          value={showContact}
-          onChange={setShowContact}
+          value={prefs.showContact}
+          onChange={update("showContact", "Show direct contact")}
+          disabled={!hydrated}
         />
       </SectionCard>
 
