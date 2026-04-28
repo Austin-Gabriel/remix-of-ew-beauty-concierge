@@ -15,7 +15,9 @@ import { Route as SplashRouteImport } from './routes/splash'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KycRouteImport } from './routes/kyc'
 import { Route as JoinRouteImport } from './routes/join'
@@ -28,6 +30,12 @@ import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as BiometricRouteImport } from './routes/biometric'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SignupServicesRouteImport } from './routes/signup.services'
+import { Route as ProfileSocialsRouteImport } from './routes/profile.socials'
+import { Route as ProfileServicesRouteImport } from './routes/profile.services'
+import { Route as ProfileReviewsRouteImport } from './routes/profile.reviews'
+import { Route as ProfilePayoutsAndBankingRouteImport } from './routes/profile.payouts-and-banking'
+import { Route as ProfileAvailabilityRouteImport } from './routes/profile.availability'
+import { Route as ProfileAccountSettingsRouteImport } from './routes/profile.account-settings'
 import { Route as OnboardingStepRouteImport } from './routes/onboarding.$step'
 import { Route as KycRejectedRouteImport } from './routes/kyc.rejected'
 import { Route as KycPendingRouteImport } from './routes/kyc.pending'
@@ -38,8 +46,18 @@ import { Route as EarningsRecentRouteImport } from './routes/earnings.recent'
 import { Route as EarningsPayoutsRouteImport } from './routes/earnings.payouts'
 import { Route as EarningsPayoutMethodRouteImport } from './routes/earnings.payout-method'
 import { Route as BookingsIdRouteImport } from './routes/bookings.$id'
+import { Route as ProfileSettingsTermsOfServiceRouteImport } from './routes/profile.settings.terms-of-service'
+import { Route as ProfileSettingsPrivacyRouteImport } from './routes/profile.settings.privacy'
+import { Route as ProfileSettingsNotificationsRouteImport } from './routes/profile.settings.notifications'
+import { Route as ProfileSettingsLanguageRouteImport } from './routes/profile.settings.language'
+import { Route as ProfileSettingsHowItWorksRouteImport } from './routes/profile.settings.how-it-works'
+import { Route as ProfileSettingsEditProfileRouteImport } from './routes/profile.settings.edit-profile'
+import { Route as ProfileSettingsEditPortfolioRouteImport } from './routes/profile.settings.edit-portfolio'
+import { Route as ProfileSettingsChangePasswordRouteImport } from './routes/profile.settings.change-password'
+import { Route as ProfileSettingsAppearanceRouteImport } from './routes/profile.settings.appearance'
 import { Route as EarningsPayoutsIdRouteImport } from './routes/earnings.payouts.$id'
 import { Route as ApiPublicSeedDemoRouteImport } from './routes/api.public.seed-demo'
+import { Route as ProfileSettingsPrivacyBlockedRouteImport } from './routes/profile.settings.privacy.blocked'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -71,9 +89,19 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -136,6 +164,37 @@ const SignupServicesRoute = SignupServicesRouteImport.update({
   path: '/services',
   getParentRoute: () => SignupRoute,
 } as any)
+const ProfileSocialsRoute = ProfileSocialsRouteImport.update({
+  id: '/socials',
+  path: '/socials',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileServicesRoute = ProfileServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileReviewsRoute = ProfileReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfilePayoutsAndBankingRoute =
+  ProfilePayoutsAndBankingRouteImport.update({
+    id: '/payouts-and-banking',
+    path: '/payouts-and-banking',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileAvailabilityRoute = ProfileAvailabilityRouteImport.update({
+  id: '/availability',
+  path: '/availability',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileAccountSettingsRoute = ProfileAccountSettingsRouteImport.update({
+  id: '/account-settings',
+  path: '/account-settings',
+  getParentRoute: () => ProfileRoute,
+} as any)
 const OnboardingStepRoute = OnboardingStepRouteImport.update({
   id: '/$step',
   path: '/$step',
@@ -186,6 +245,58 @@ const BookingsIdRoute = BookingsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => BookingsRoute,
 } as any)
+const ProfileSettingsTermsOfServiceRoute =
+  ProfileSettingsTermsOfServiceRouteImport.update({
+    id: '/settings/terms-of-service',
+    path: '/settings/terms-of-service',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsPrivacyRoute = ProfileSettingsPrivacyRouteImport.update({
+  id: '/settings/privacy',
+  path: '/settings/privacy',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileSettingsNotificationsRoute =
+  ProfileSettingsNotificationsRouteImport.update({
+    id: '/settings/notifications',
+    path: '/settings/notifications',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsLanguageRoute = ProfileSettingsLanguageRouteImport.update({
+  id: '/settings/language',
+  path: '/settings/language',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileSettingsHowItWorksRoute =
+  ProfileSettingsHowItWorksRouteImport.update({
+    id: '/settings/how-it-works',
+    path: '/settings/how-it-works',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsEditProfileRoute =
+  ProfileSettingsEditProfileRouteImport.update({
+    id: '/settings/edit-profile',
+    path: '/settings/edit-profile',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsEditPortfolioRoute =
+  ProfileSettingsEditPortfolioRouteImport.update({
+    id: '/settings/edit-portfolio',
+    path: '/settings/edit-portfolio',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsChangePasswordRoute =
+  ProfileSettingsChangePasswordRouteImport.update({
+    id: '/settings/change-password',
+    path: '/settings/change-password',
+    getParentRoute: () => ProfileRoute,
+  } as any)
+const ProfileSettingsAppearanceRoute =
+  ProfileSettingsAppearanceRouteImport.update({
+    id: '/settings/appearance',
+    path: '/settings/appearance',
+    getParentRoute: () => ProfileRoute,
+  } as any)
 const EarningsPayoutsIdRoute = EarningsPayoutsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -196,6 +307,12 @@ const ApiPublicSeedDemoRoute = ApiPublicSeedDemoRouteImport.update({
   path: '/api/public/seed-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileSettingsPrivacyBlockedRoute =
+  ProfileSettingsPrivacyBlockedRouteImport.update({
+    id: '/blocked',
+    path: '/blocked',
+    getParentRoute: () => ProfileSettingsPrivacyRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -209,7 +326,9 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -226,9 +345,25 @@ export interface FileRoutesByFullPath {
   '/kyc/pending': typeof KycPendingRoute
   '/kyc/rejected': typeof KycRejectedRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/profile/account-settings': typeof ProfileAccountSettingsRoute
+  '/profile/availability': typeof ProfileAvailabilityRoute
+  '/profile/payouts-and-banking': typeof ProfilePayoutsAndBankingRoute
+  '/profile/reviews': typeof ProfileReviewsRoute
+  '/profile/services': typeof ProfileServicesRoute
+  '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
+  '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
+  '/profile/settings/change-password': typeof ProfileSettingsChangePasswordRoute
+  '/profile/settings/edit-portfolio': typeof ProfileSettingsEditPortfolioRoute
+  '/profile/settings/edit-profile': typeof ProfileSettingsEditProfileRoute
+  '/profile/settings/how-it-works': typeof ProfileSettingsHowItWorksRoute
+  '/profile/settings/language': typeof ProfileSettingsLanguageRoute
+  '/profile/settings/notifications': typeof ProfileSettingsNotificationsRoute
+  '/profile/settings/privacy': typeof ProfileSettingsPrivacyRouteWithChildren
+  '/profile/settings/terms-of-service': typeof ProfileSettingsTermsOfServiceRoute
+  '/profile/settings/privacy/blocked': typeof ProfileSettingsPrivacyBlockedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -242,7 +377,9 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -259,9 +396,25 @@ export interface FileRoutesByTo {
   '/kyc/pending': typeof KycPendingRoute
   '/kyc/rejected': typeof KycRejectedRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/profile/account-settings': typeof ProfileAccountSettingsRoute
+  '/profile/availability': typeof ProfileAvailabilityRoute
+  '/profile/payouts-and-banking': typeof ProfilePayoutsAndBankingRoute
+  '/profile/reviews': typeof ProfileReviewsRoute
+  '/profile/services': typeof ProfileServicesRoute
+  '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
+  '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
+  '/profile/settings/change-password': typeof ProfileSettingsChangePasswordRoute
+  '/profile/settings/edit-portfolio': typeof ProfileSettingsEditPortfolioRoute
+  '/profile/settings/edit-profile': typeof ProfileSettingsEditProfileRoute
+  '/profile/settings/how-it-works': typeof ProfileSettingsHowItWorksRoute
+  '/profile/settings/language': typeof ProfileSettingsLanguageRoute
+  '/profile/settings/notifications': typeof ProfileSettingsNotificationsRoute
+  '/profile/settings/privacy': typeof ProfileSettingsPrivacyRouteWithChildren
+  '/profile/settings/terms-of-service': typeof ProfileSettingsTermsOfServiceRoute
+  '/profile/settings/privacy/blocked': typeof ProfileSettingsPrivacyBlockedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -276,7 +429,9 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/kyc': typeof KycRouteWithChildren
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/profile': typeof ProfileRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRouteWithChildren
@@ -293,9 +448,25 @@ export interface FileRoutesById {
   '/kyc/pending': typeof KycPendingRoute
   '/kyc/rejected': typeof KycRejectedRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/profile/account-settings': typeof ProfileAccountSettingsRoute
+  '/profile/availability': typeof ProfileAvailabilityRoute
+  '/profile/payouts-and-banking': typeof ProfilePayoutsAndBankingRoute
+  '/profile/reviews': typeof ProfileReviewsRoute
+  '/profile/services': typeof ProfileServicesRoute
+  '/profile/socials': typeof ProfileSocialsRoute
   '/signup/services': typeof SignupServicesRoute
   '/api/public/seed-demo': typeof ApiPublicSeedDemoRoute
   '/earnings/payouts/$id': typeof EarningsPayoutsIdRoute
+  '/profile/settings/appearance': typeof ProfileSettingsAppearanceRoute
+  '/profile/settings/change-password': typeof ProfileSettingsChangePasswordRoute
+  '/profile/settings/edit-portfolio': typeof ProfileSettingsEditPortfolioRoute
+  '/profile/settings/edit-profile': typeof ProfileSettingsEditProfileRoute
+  '/profile/settings/how-it-works': typeof ProfileSettingsHowItWorksRoute
+  '/profile/settings/language': typeof ProfileSettingsLanguageRoute
+  '/profile/settings/notifications': typeof ProfileSettingsNotificationsRoute
+  '/profile/settings/privacy': typeof ProfileSettingsPrivacyRouteWithChildren
+  '/profile/settings/terms-of-service': typeof ProfileSettingsTermsOfServiceRoute
+  '/profile/settings/privacy/blocked': typeof ProfileSettingsPrivacyBlockedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -311,7 +482,9 @@ export interface FileRouteTypes {
     | '/join'
     | '/kyc'
     | '/login'
+    | '/notifications'
     | '/onboarding'
+    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -328,9 +501,25 @@ export interface FileRouteTypes {
     | '/kyc/pending'
     | '/kyc/rejected'
     | '/onboarding/$step'
+    | '/profile/account-settings'
+    | '/profile/availability'
+    | '/profile/payouts-and-banking'
+    | '/profile/reviews'
+    | '/profile/services'
+    | '/profile/socials'
     | '/signup/services'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
+    | '/profile/settings/appearance'
+    | '/profile/settings/change-password'
+    | '/profile/settings/edit-portfolio'
+    | '/profile/settings/edit-profile'
+    | '/profile/settings/how-it-works'
+    | '/profile/settings/language'
+    | '/profile/settings/notifications'
+    | '/profile/settings/privacy'
+    | '/profile/settings/terms-of-service'
+    | '/profile/settings/privacy/blocked'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -344,7 +533,9 @@ export interface FileRouteTypes {
     | '/join'
     | '/kyc'
     | '/login'
+    | '/notifications'
     | '/onboarding'
+    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -361,9 +552,25 @@ export interface FileRouteTypes {
     | '/kyc/pending'
     | '/kyc/rejected'
     | '/onboarding/$step'
+    | '/profile/account-settings'
+    | '/profile/availability'
+    | '/profile/payouts-and-banking'
+    | '/profile/reviews'
+    | '/profile/services'
+    | '/profile/socials'
     | '/signup/services'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
+    | '/profile/settings/appearance'
+    | '/profile/settings/change-password'
+    | '/profile/settings/edit-portfolio'
+    | '/profile/settings/edit-profile'
+    | '/profile/settings/how-it-works'
+    | '/profile/settings/language'
+    | '/profile/settings/notifications'
+    | '/profile/settings/privacy'
+    | '/profile/settings/terms-of-service'
+    | '/profile/settings/privacy/blocked'
   id:
     | '__root__'
     | '/'
@@ -377,7 +584,9 @@ export interface FileRouteTypes {
     | '/join'
     | '/kyc'
     | '/login'
+    | '/notifications'
     | '/onboarding'
+    | '/profile'
     | '/reset-password'
     | '/sign-in'
     | '/signup'
@@ -394,9 +603,25 @@ export interface FileRouteTypes {
     | '/kyc/pending'
     | '/kyc/rejected'
     | '/onboarding/$step'
+    | '/profile/account-settings'
+    | '/profile/availability'
+    | '/profile/payouts-and-banking'
+    | '/profile/reviews'
+    | '/profile/services'
+    | '/profile/socials'
     | '/signup/services'
     | '/api/public/seed-demo'
     | '/earnings/payouts/$id'
+    | '/profile/settings/appearance'
+    | '/profile/settings/change-password'
+    | '/profile/settings/edit-portfolio'
+    | '/profile/settings/edit-profile'
+    | '/profile/settings/how-it-works'
+    | '/profile/settings/language'
+    | '/profile/settings/notifications'
+    | '/profile/settings/privacy'
+    | '/profile/settings/terms-of-service'
+    | '/profile/settings/privacy/blocked'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -411,7 +636,9 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   KycRoute: typeof KycRouteWithChildren
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
+  ProfileRoute: typeof ProfileRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignInRoute: typeof SignInRoute
   SignupRoute: typeof SignupRouteWithChildren
@@ -465,11 +692,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -556,6 +797,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupServicesRouteImport
       parentRoute: typeof SignupRoute
     }
+    '/profile/socials': {
+      id: '/profile/socials'
+      path: '/socials'
+      fullPath: '/profile/socials'
+      preLoaderRoute: typeof ProfileSocialsRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/services': {
+      id: '/profile/services'
+      path: '/services'
+      fullPath: '/profile/services'
+      preLoaderRoute: typeof ProfileServicesRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/reviews': {
+      id: '/profile/reviews'
+      path: '/reviews'
+      fullPath: '/profile/reviews'
+      preLoaderRoute: typeof ProfileReviewsRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/payouts-and-banking': {
+      id: '/profile/payouts-and-banking'
+      path: '/payouts-and-banking'
+      fullPath: '/profile/payouts-and-banking'
+      preLoaderRoute: typeof ProfilePayoutsAndBankingRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/availability': {
+      id: '/profile/availability'
+      path: '/availability'
+      fullPath: '/profile/availability'
+      preLoaderRoute: typeof ProfileAvailabilityRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/account-settings': {
+      id: '/profile/account-settings'
+      path: '/account-settings'
+      fullPath: '/profile/account-settings'
+      preLoaderRoute: typeof ProfileAccountSettingsRouteImport
+      parentRoute: typeof ProfileRoute
+    }
     '/onboarding/$step': {
       id: '/onboarding/$step'
       path: '/$step'
@@ -626,6 +909,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingsIdRouteImport
       parentRoute: typeof BookingsRoute
     }
+    '/profile/settings/terms-of-service': {
+      id: '/profile/settings/terms-of-service'
+      path: '/settings/terms-of-service'
+      fullPath: '/profile/settings/terms-of-service'
+      preLoaderRoute: typeof ProfileSettingsTermsOfServiceRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/privacy': {
+      id: '/profile/settings/privacy'
+      path: '/settings/privacy'
+      fullPath: '/profile/settings/privacy'
+      preLoaderRoute: typeof ProfileSettingsPrivacyRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/notifications': {
+      id: '/profile/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/profile/settings/notifications'
+      preLoaderRoute: typeof ProfileSettingsNotificationsRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/language': {
+      id: '/profile/settings/language'
+      path: '/settings/language'
+      fullPath: '/profile/settings/language'
+      preLoaderRoute: typeof ProfileSettingsLanguageRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/how-it-works': {
+      id: '/profile/settings/how-it-works'
+      path: '/settings/how-it-works'
+      fullPath: '/profile/settings/how-it-works'
+      preLoaderRoute: typeof ProfileSettingsHowItWorksRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/edit-profile': {
+      id: '/profile/settings/edit-profile'
+      path: '/settings/edit-profile'
+      fullPath: '/profile/settings/edit-profile'
+      preLoaderRoute: typeof ProfileSettingsEditProfileRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/edit-portfolio': {
+      id: '/profile/settings/edit-portfolio'
+      path: '/settings/edit-portfolio'
+      fullPath: '/profile/settings/edit-portfolio'
+      preLoaderRoute: typeof ProfileSettingsEditPortfolioRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/change-password': {
+      id: '/profile/settings/change-password'
+      path: '/settings/change-password'
+      fullPath: '/profile/settings/change-password'
+      preLoaderRoute: typeof ProfileSettingsChangePasswordRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/settings/appearance': {
+      id: '/profile/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/profile/settings/appearance'
+      preLoaderRoute: typeof ProfileSettingsAppearanceRouteImport
+      parentRoute: typeof ProfileRoute
+    }
     '/earnings/payouts/$id': {
       id: '/earnings/payouts/$id'
       path: '/$id'
@@ -639,6 +985,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/seed-demo'
       preLoaderRoute: typeof ApiPublicSeedDemoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/profile/settings/privacy/blocked': {
+      id: '/profile/settings/privacy/blocked'
+      path: '/blocked'
+      fullPath: '/profile/settings/privacy/blocked'
+      preLoaderRoute: typeof ProfileSettingsPrivacyBlockedRouteImport
+      parentRoute: typeof ProfileSettingsPrivacyRoute
     }
   }
 }
@@ -713,6 +1066,59 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
   OnboardingRouteChildren,
 )
 
+interface ProfileSettingsPrivacyRouteChildren {
+  ProfileSettingsPrivacyBlockedRoute: typeof ProfileSettingsPrivacyBlockedRoute
+}
+
+const ProfileSettingsPrivacyRouteChildren: ProfileSettingsPrivacyRouteChildren =
+  {
+    ProfileSettingsPrivacyBlockedRoute: ProfileSettingsPrivacyBlockedRoute,
+  }
+
+const ProfileSettingsPrivacyRouteWithChildren =
+  ProfileSettingsPrivacyRoute._addFileChildren(
+    ProfileSettingsPrivacyRouteChildren,
+  )
+
+interface ProfileRouteChildren {
+  ProfileAccountSettingsRoute: typeof ProfileAccountSettingsRoute
+  ProfileAvailabilityRoute: typeof ProfileAvailabilityRoute
+  ProfilePayoutsAndBankingRoute: typeof ProfilePayoutsAndBankingRoute
+  ProfileReviewsRoute: typeof ProfileReviewsRoute
+  ProfileServicesRoute: typeof ProfileServicesRoute
+  ProfileSocialsRoute: typeof ProfileSocialsRoute
+  ProfileSettingsAppearanceRoute: typeof ProfileSettingsAppearanceRoute
+  ProfileSettingsChangePasswordRoute: typeof ProfileSettingsChangePasswordRoute
+  ProfileSettingsEditPortfolioRoute: typeof ProfileSettingsEditPortfolioRoute
+  ProfileSettingsEditProfileRoute: typeof ProfileSettingsEditProfileRoute
+  ProfileSettingsHowItWorksRoute: typeof ProfileSettingsHowItWorksRoute
+  ProfileSettingsLanguageRoute: typeof ProfileSettingsLanguageRoute
+  ProfileSettingsNotificationsRoute: typeof ProfileSettingsNotificationsRoute
+  ProfileSettingsPrivacyRoute: typeof ProfileSettingsPrivacyRouteWithChildren
+  ProfileSettingsTermsOfServiceRoute: typeof ProfileSettingsTermsOfServiceRoute
+}
+
+const ProfileRouteChildren: ProfileRouteChildren = {
+  ProfileAccountSettingsRoute: ProfileAccountSettingsRoute,
+  ProfileAvailabilityRoute: ProfileAvailabilityRoute,
+  ProfilePayoutsAndBankingRoute: ProfilePayoutsAndBankingRoute,
+  ProfileReviewsRoute: ProfileReviewsRoute,
+  ProfileServicesRoute: ProfileServicesRoute,
+  ProfileSocialsRoute: ProfileSocialsRoute,
+  ProfileSettingsAppearanceRoute: ProfileSettingsAppearanceRoute,
+  ProfileSettingsChangePasswordRoute: ProfileSettingsChangePasswordRoute,
+  ProfileSettingsEditPortfolioRoute: ProfileSettingsEditPortfolioRoute,
+  ProfileSettingsEditProfileRoute: ProfileSettingsEditProfileRoute,
+  ProfileSettingsHowItWorksRoute: ProfileSettingsHowItWorksRoute,
+  ProfileSettingsLanguageRoute: ProfileSettingsLanguageRoute,
+  ProfileSettingsNotificationsRoute: ProfileSettingsNotificationsRoute,
+  ProfileSettingsPrivacyRoute: ProfileSettingsPrivacyRouteWithChildren,
+  ProfileSettingsTermsOfServiceRoute: ProfileSettingsTermsOfServiceRoute,
+}
+
+const ProfileRouteWithChildren =
+  ProfileRoute._addFileChildren(ProfileRouteChildren)
+
 interface SignupRouteChildren {
   SignupServicesRoute: typeof SignupServicesRoute
 }
@@ -736,7 +1142,9 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   KycRoute: KycRouteWithChildren,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
+  ProfileRoute: ProfileRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SignInRoute: SignInRoute,
   SignupRoute: SignupRouteWithChildren,
