@@ -29,7 +29,7 @@ import {
   type DevDayContext,
 } from "@/dev-state/dev-state-context";
 import { RequireAuth } from "@/auth/require-auth";
-import { ProfileSheet } from "@/home/profile-sheet";
+
 import { LifecycleSurface } from "@/bookings/lifecycle/lifecycle-surface";
 import { ActiveBookingStrip } from "@/components/active-booking-strip";
 import { useNavigate } from "@tanstack/react-router";
