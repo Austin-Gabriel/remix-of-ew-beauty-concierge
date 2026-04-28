@@ -90,6 +90,7 @@ function RootComponent() {
             <RescheduleProvider>
               <Outlet />
               <DevStateToggle />
+              <Toaster />
             </RescheduleProvider>
           </KycProvider>
         </OnboardingProvider>
