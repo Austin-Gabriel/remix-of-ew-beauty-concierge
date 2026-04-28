@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { HomeShell, HOME_SANS, useHomeTheme } from "@/home/home-shell";
 import { PageHeader } from "./profile-ui";
 import { useProfile } from "./profile-context";
+import { useAuth } from "@/auth/auth-context";
+import { uploadPortfolioPhoto } from "./profile-cloud-sync";
 
 const MAX_PHOTOS = 24;
 const MIN_BOOKABLE = 3;
@@ -23,7 +25,9 @@ export function EditPortfolioPage() {
 
   const dirty = photos.length !== data.portfolio.length || photos.some((p, i) => p !== data.portfolio[i]);
 
-  const onPick = (files: FileList | null) => {
+  const { userId } = useAuth();
+
+  const onPick = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const room = MAX_PHOTOS - photos.length;
     if (room <= 0) {
@@ -31,7 +35,9 @@ export function EditPortfolioPage() {
       return;
     }
     const take = Array.from(files).slice(0, room);
-    Promise.all(
+
+    // Optimistic local previews via data URL …
+    const previews = await Promise.all(
       take.map(
         (f) =>
           new Promise<string>((res, rej) => {
@@ -41,7 +47,19 @@ export function EditPortfolioPage() {
             r.readAsDataURL(f);
           }),
       ),
-    ).then((urls) => setPhotos((prev) => [...prev, ...urls]));
+    );
+    setPhotos((prev) => [...prev, ...previews]);
+
+    // … then swap each preview for its uploaded public URL when signed in.
+    if (!userId) return;
+    take.forEach(async (file, i) => {
+      try {
+        const url = await uploadPortfolioPhoto(userId, file);
+        setPhotos((prev) => prev.map((p) => (p === previews[i] ? url : p)));
+      } catch {
+        toast("Couldn't upload one photo. Kept local copy.");
+      }
+    });
   };
 
   const onTapTile = (i: number) => {

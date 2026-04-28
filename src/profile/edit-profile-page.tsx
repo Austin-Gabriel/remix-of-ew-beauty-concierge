@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { HomeShell, HOME_SANS, useHomeTheme } from "@/home/home-shell";
 import { PageHeader, SectionLabel } from "./profile-ui";
 import { monogramOf, useProfile } from "./profile-context";
+import { useAuth } from "@/auth/auth-context";
+import { uploadAvatar } from "./profile-cloud-sync";
 
 /**
  * /profile/settings/edit-profile — name, tagline, neighborhood, address,
