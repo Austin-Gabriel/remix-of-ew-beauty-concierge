@@ -1,14 +1,24 @@
 import { HomeShell, HOME_SANS } from "@/home/home-shell";
 import { PageHeader, RowGroup } from "./profile-ui";
 import { useProfile } from "./profile-context";
+import { useAuth } from "@/auth/auth-context";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function BlockedListPage() {
   const { data, patch } = useProfile();
+  const { userId } = useAuth();
 
-  const unblock = (id: string) => {
+  const unblock = async (id: string) => {
+    // Optimistic local removal
     patch({ blocked: data.blocked.filter((b) => b.id !== id) });
-    toast("Unblocked.");
+    if (userId) {
+      const { error } = await supabase.from("blocked_pairs").delete().eq("id", id).eq("blocker_user_id", userId);
+      if (error) toast("Couldn't unblock — try again.");
+      else toast("Unblocked.");
+    } else {
+      toast("Unblocked.");
+    }
   };
 
   return (
