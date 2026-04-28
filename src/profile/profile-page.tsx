@@ -36,8 +36,8 @@ export function ProfilePage() {
           <Row
             label="Services & pricing"
             sub={
-              data.services.length > 0
-                ? `${data.services.length} services · ${minPriceLabel}`
+              data.serviceMenu.length > 0
+                ? `${data.serviceMenu.length} services · ${minPriceLabel}`
                 : "Add Services to get bookings"
             }
             to="/profile/services"
