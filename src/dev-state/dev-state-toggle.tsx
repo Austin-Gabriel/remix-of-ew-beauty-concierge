@@ -427,6 +427,27 @@ export function DevStateToggle() {
                 onChange={(v) => setRescheduleState(v as DevRescheduleState)}
               />
               <Group
+                title="Profile · completeness"
+                value={state.profileCompleteness}
+                options={PROFILE_COMPLETENESS}
+                onChange={(v) => setProfileCompleteness(v as DevProfileCompleteness)}
+              />
+              <Group
+                title="Profile · verification"
+                value={state.profileVerification}
+                options={PROFILE_VERIFICATION}
+                onChange={(v) => setProfileVerification(v as DevProfileVerification)}
+              />
+              <ToggleGroup
+                title="Profile · sections"
+                items={PROFILE_SECTION_KEYS.map((s) => ({
+                  key: s.key,
+                  label: s.label,
+                  value: state.profileSections[s.key],
+                }))}
+                onToggle={(key, value) => setProfileSection(key as keyof DevProfileSections, value)}
+              />
+              <Group
                 title="Theme override"
                 value={state.theme}
                 options={THEMES.map((t) => ({ ...t, hint: "" }))}
