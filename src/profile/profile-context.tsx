@@ -216,7 +216,15 @@ function read(): ProfileData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PROFILE;
-    return { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as ProfileData) };
+    const parsed = JSON.parse(raw) as Partial<ProfileData>;
+    return {
+      ...DEFAULT_PROFILE,
+      ...parsed,
+      notifications: { ...DEFAULT_PROFILE.notifications, ...(parsed.notifications ?? {}) },
+      privacy: { ...DEFAULT_PROFILE.privacy, ...(parsed.privacy ?? {}) },
+      availability: { ...DEFAULT_PROFILE.availability, ...(parsed.availability ?? {}) },
+      serviceMenu: parsed.serviceMenu ?? DEFAULT_PROFILE.serviceMenu,
+    };
   } catch {
     return DEFAULT_PROFILE;
   }
