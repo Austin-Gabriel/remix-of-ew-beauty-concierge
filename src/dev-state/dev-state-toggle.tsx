@@ -140,6 +140,29 @@ const RESCHEDULE_STATES: { value: DevRescheduleState; label: string; hint: strin
   { value: "expired", label: "Expired", hint: "Proposal timed out" },
 ];
 
+const PROFILE_COMPLETENESS: { value: DevProfileCompleteness; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "Match data density" },
+  { value: "empty", label: "Empty", hint: "New pro — nothing filled in" },
+  { value: "sparse", label: "Sparse", hint: "Avatar + a couple services" },
+  { value: "rich", label: "Rich", hint: "Full bio, portfolio, reviews" },
+];
+
+const PROFILE_VERIFICATION: { value: DevProfileVerification; label: string; hint: string }[] = [
+  { value: "auto", label: "Auto", hint: "From mock account" },
+  { value: "unverified", label: "Unverified", hint: "No badges" },
+  { value: "pending", label: "Pending review", hint: "Submitted, awaiting check" },
+  { value: "verified", label: "Verified", hint: "Blue check" },
+  { value: "top-pro", label: "Top Pro", hint: "Verified + star badge" },
+];
+
+const PROFILE_SECTION_KEYS: { key: keyof DevProfileSections; label: string }[] = [
+  { key: "hideAvatar", label: "Hide avatar" },
+  { key: "hideBio", label: "Hide bio" },
+  { key: "hidePortfolio", label: "Hide portfolio" },
+  { key: "hideReviews", label: "Hide reviews" },
+  { key: "hideSocials", label: "Hide socials" },
+];
+
 const RESCHEDULE_FOCUS_ID = "b1";
 
 export function DevStateToggle() {
