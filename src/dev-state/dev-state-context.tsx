@@ -113,6 +113,39 @@ export type DevRescheduleState =
   | "declined"
   | "expired";
 
+/* ---- Profile sub-axes ---- */
+
+/**
+ * Overall profile completeness. Drives avatar, bio, services, portfolio,
+ * reviews, and socials density on the Profile page. "auto" defers to the
+ * top-level dataDensity axis.
+ */
+export type DevProfileCompleteness = "auto" | "empty" | "sparse" | "rich";
+
+/**
+ * Verification / trust state. Drives badges shown on IdentityCard and the
+ * customer-view modal (verified check, pending review, top-pro star).
+ */
+export type DevProfileVerification =
+  | "auto"
+  | "unverified"
+  | "pending"
+  | "verified"
+  | "top-pro";
+
+/**
+ * Per-section toggles. Each flag forces that section into its empty state
+ * regardless of completeness. Useful for testing one empty state at a time
+ * (e.g. has portfolio but no reviews).
+ */
+export interface DevProfileSections {
+  hideAvatar: boolean;
+  hideBio: boolean;
+  hidePortfolio: boolean;
+  hideReviews: boolean;
+  hideSocials: boolean;
+}
+
 export interface DevState {
   proState: DevProState;
   dataDensity: DevDataDensity;
