@@ -162,6 +162,9 @@ export interface DevState {
   availability: DevAvailability;
   availabilityOverride: DevAvailabilityOverride | null;
   rescheduleState: DevRescheduleState;
+  profileCompleteness: DevProfileCompleteness;
+  profileVerification: DevProfileVerification;
+  profileSections: DevProfileSections;
 }
 
 const DEFAULT_STATE: DevState = {
