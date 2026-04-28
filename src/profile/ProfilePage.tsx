@@ -86,25 +86,25 @@ export function ProfilePage() {
       <SectionLabel>{t("profilePage.storefront", { defaultValue: "Storefront" })}</SectionLabel>
       <SectionCard>
         <SettingsRow
-          icon={<Scissors size={14} strokeWidth={1.8} />}
+          icon={<Scissors size={17} strokeWidth={2} />}
           label={t("profilePage.services", { defaultValue: "Services & pricing" })}
           sublabel={servicesSub}
           onClick={() => navigate({ to: "/profile/services" })}
         />
         <SettingsRow
-          icon={<ImageIcon size={14} strokeWidth={1.8} />}
+          icon={<ImageIcon size={17} strokeWidth={2} />}
           label={t("profilePage.portfolio", { defaultValue: "Portfolio" })}
           sublabel={portfolioSub}
           onClick={() => navigate({ to: "/profile/settings/edit-portfolio" })}
         />
         <SettingsRow
-          icon={<Star size={14} strokeWidth={1.8} />}
+          icon={<Star size={17} strokeWidth={2} fill="currentColor" />}
           label={t("profilePage.reviews", { defaultValue: "Reviews" })}
           sublabel={reviewsSub}
           onClick={() => navigate({ to: "/profile/reviews" })}
         />
         <SettingsRow
-          icon={<Eye size={14} strokeWidth={1.8} />}
+          icon={<Eye size={17} strokeWidth={2} />}
           label={t("profilePage.customerView", { defaultValue: "Customer view" })}
           sublabel={t("profilePage.customerViewSub", { defaultValue: "How clients see you" })}
           onClick={() => setCustomerViewOpen(true)}
@@ -114,7 +114,7 @@ export function ProfilePage() {
       <SectionLabel>{t("profilePage.howYouWork", { defaultValue: "How you work" })}</SectionLabel>
       <SectionCard>
         <SettingsRow
-          icon={<Calendar size={14} strokeWidth={1.8} />}
+          icon={<Calendar size={17} strokeWidth={2} />}
           label={t("profilePage.availability", { defaultValue: "Availability" })}
           sublabel={
             profile.availability.summary ??
@@ -123,7 +123,7 @@ export function ProfilePage() {
           onClick={() => navigate({ to: "/profile/availability" })}
         />
         <SettingsRow
-          icon={<CreditCard size={14} strokeWidth={1.8} />}
+          icon={<CreditCard size={17} strokeWidth={2} />}
           label={t("profilePage.payouts", { defaultValue: "Payouts" })}
           sublabel={
             profile.payout.method ??
@@ -136,14 +136,14 @@ export function ProfilePage() {
       <SectionLabel>{t("profilePage.social", { defaultValue: "Social" })}</SectionLabel>
       <SectionCard>
         <SettingsRow
-          icon={<Link2 size={14} strokeWidth={1.8} />}
+          icon={<Link2 size={17} strokeWidth={2} />}
           label={t("profilePage.socialsLabel", { defaultValue: "Connect socials" })}
           sublabel={socialsSub}
           right={
             profile.socials.length === 0 ? (
               <span
-                className="rounded-full px-3 py-1 text-[12px] font-semibold"
-                style={{ backgroundColor: "var(--eb-orange)", color: "white" }}
+                className="text-[15px] font-semibold"
+                style={{ color: "var(--eb-orange)" }}
               >
                 {t("profilePage.connect", { defaultValue: "Connect" })}
               </span>
