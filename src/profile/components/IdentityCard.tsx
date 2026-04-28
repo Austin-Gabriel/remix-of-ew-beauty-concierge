@@ -33,10 +33,10 @@ export function IdentityCard({
 
   return (
     <div
-      className="relative mx-4 mb-2 flex items-center gap-4 px-4 py-4"
+      className="relative mx-4 mb-2 flex items-center gap-4 px-5 py-5"
       style={{
         backgroundColor: "var(--eb-surface)",
-        borderRadius: 14,
+        borderRadius: 18,
         border: "1px solid var(--eb-hairline)",
       }}
     >
@@ -44,15 +44,15 @@ export function IdentityCard({
         <img
           src={avatarUrl}
           alt={name}
-          className="h-[72px] w-[72px] shrink-0 rounded-full object-cover"
+          className="h-[88px] w-[88px] shrink-0 rounded-full object-cover"
         />
       ) : (
         <div
           aria-hidden
-          className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full text-[22px] font-semibold"
+          className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-full text-[30px] font-bold"
           style={{
-            backgroundColor: "#F4E2D0",
-            color: "#3A1A0E",
+            backgroundColor: "var(--eb-orange-soft)",
+            color: "var(--eb-orange)",
             fontFamily: '"Uncut Sans", system-ui, sans-serif',
             letterSpacing: "0.02em",
           }}
@@ -63,7 +63,7 @@ export function IdentityCard({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <span
-          className="truncate text-[20px] font-semibold leading-tight"
+          className="truncate text-[22px] font-bold leading-tight"
           style={{ color: "var(--eb-fg)" }}
         >
           {name}
@@ -76,29 +76,24 @@ export function IdentityCard({
             {subtitle}
           </span>
         ) : null}
-        <div className="mt-1.5 flex items-center gap-1.5">
-          <Star size={14} fill="currentColor" style={{ color: "var(--eb-orange)" }} />
+        <div className="mt-2 flex items-center gap-1.5">
+          <Star size={15} strokeWidth={2} style={{ color: "var(--eb-orange)" }} />
           {hasReviews ? (
             <>
               <span
-                className="text-[14px] leading-none"
-                style={{ color: "var(--eb-fg)", fontWeight: 500 }}
+                className="text-[15px] font-bold leading-none"
+                style={{ color: "var(--eb-fg)" }}
               >
-                {rating!.toFixed(1)}
+                {rating!.toFixed(2)}
               </span>
-              <span className="text-[13px]" style={{ color: "var(--eb-fg-muted)" }}>
-                ({reviewCount} reviews)
+              <span className="text-[14px]" style={{ color: "var(--eb-fg-muted)" }}>
+                ({reviewCount})
               </span>
             </>
           ) : (
-            <>
-              <span className="text-[14px]" style={{ color: "var(--eb-fg-muted)" }}>
-                —
-              </span>
-              <span className="text-[13px]" style={{ color: "var(--eb-fg-muted)" }}>
-                (0 reviews)
-              </span>
-            </>
+            <span className="text-[14px]" style={{ color: "var(--eb-fg-muted)" }}>
+              No reviews yet
+            </span>
           )}
         </div>
       </div>
@@ -106,13 +101,13 @@ export function IdentityCard({
       <Link
         to="/profile/settings/edit-profile"
         aria-label="Edit profile"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:bg-[var(--eb-surface-2)]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors active:bg-[var(--eb-surface-2)]"
         style={{
           color: "var(--eb-fg)",
           border: "1px solid var(--eb-hairline)",
         }}
       >
-        <Pencil size={15} strokeWidth={1.8} />
+        <Pencil size={16} strokeWidth={2} />
       </Link>
     </div>
   );
