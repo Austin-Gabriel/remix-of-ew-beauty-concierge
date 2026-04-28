@@ -31,19 +31,19 @@ export function AppearancePage() {
           icon={<Sun size={14} strokeWidth={1.8} />}
           label="Light"
           active={state.theme === "light"}
-          onClick={() => updateState({ theme: "light" })}
+          onClick={() => setTheme("light")}
         />
         <ThemeRow
           icon={<Moon size={14} strokeWidth={1.8} />}
           label="Dark"
           active={state.theme === "dark"}
-          onClick={() => updateState({ theme: "dark" })}
+          onClick={() => setTheme("dark")}
         />
         <ThemeRow
           icon={<Monitor size={14} strokeWidth={1.8} />}
           label="System"
           active={state.theme === "system"}
-          onClick={() => updateState({ theme: "system" })}
+          onClick={() => setTheme("system")}
         />
       </SectionCard>
 
