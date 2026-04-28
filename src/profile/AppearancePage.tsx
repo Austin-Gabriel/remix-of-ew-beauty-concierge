@@ -162,37 +162,81 @@ export function LanguagePage() {
 /* ------------------------------------------------------------------ */
 /* NotificationsPage                                                  */
 /* ------------------------------------------------------------------ */
+const NOTIF_PREFS_KEY = "ewa.notifPrefs";
+const DEFAULT_NOTIF_PREFS = {
+  pushNewBooking: true,
+  pushReminders: true,
+  pushMessages: true,
+  pushReviews: false,
+  emailWeekly: true,
+  emailPromotions: false,
+  smsUrgent: true,
+};
+type NotifPrefs = typeof DEFAULT_NOTIF_PREFS;
+
+function loadNotifPrefs(): NotifPrefs {
+  if (typeof window === "undefined") return DEFAULT_NOTIF_PREFS;
+  try {
+    const raw = window.localStorage.getItem(NOTIF_PREFS_KEY);
+    if (!raw) return DEFAULT_NOTIF_PREFS;
+    return { ...DEFAULT_NOTIF_PREFS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_NOTIF_PREFS;
+  }
+}
+
+const NOTIF_LABELS: Record<keyof NotifPrefs, string> = {
+  pushNewBooking: "New booking requests",
+  pushReminders: "Appointment reminders",
+  pushMessages: "Messages",
+  pushReviews: "New reviews",
+  emailWeekly: "Weekly summary",
+  emailPromotions: "Promotions & tips",
+  smsUrgent: "Urgent alerts only",
+};
+
 export function NotificationsPage() {
-  const [prefs, setPrefs] = useState({
-    pushNewBooking: true,
-    pushReminders: true,
-    pushMessages: true,
-    pushReviews: false,
-    emailWeekly: true,
-    emailPromotions: false,
-    smsUrgent: true,
-  });
-  const set = (k: keyof typeof prefs) => (v: boolean) => setPrefs((p) => ({ ...p, [k]: v }));
+  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setPrefs(loadNotifPrefs());
+    setHydrated(true);
+  }, []);
+
+  const set = (k: keyof NotifPrefs) => (v: boolean) => {
+    // Optimistic UI: flip state immediately, persist + toast in same tick.
+    setPrefs((p) => {
+      const next = { ...p, [k]: v };
+      try {
+        window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(next));
+      } catch {
+        /* storage may be unavailable in private mode */
+      }
+      return next;
+    });
+    toast.success(`${NOTIF_LABELS[k]} ${v ? "on" : "off"}`);
+  };
 
   return (
     <SubpageShell title="Notifications">
       <SectionLabel>Push</SectionLabel>
       <SectionCard>
-        <ToggleRow label="New booking requests" value={prefs.pushNewBooking} onChange={set("pushNewBooking")} />
-        <ToggleRow label="Appointment reminders" value={prefs.pushReminders} onChange={set("pushReminders")} />
-        <ToggleRow label="Messages" value={prefs.pushMessages} onChange={set("pushMessages")} />
-        <ToggleRow label="New reviews" value={prefs.pushReviews} onChange={set("pushReviews")} />
+        <ToggleRow label={NOTIF_LABELS.pushNewBooking} value={prefs.pushNewBooking} onChange={set("pushNewBooking")} disabled={!hydrated} />
+        <ToggleRow label={NOTIF_LABELS.pushReminders} value={prefs.pushReminders} onChange={set("pushReminders")} disabled={!hydrated} />
+        <ToggleRow label={NOTIF_LABELS.pushMessages} value={prefs.pushMessages} onChange={set("pushMessages")} disabled={!hydrated} />
+        <ToggleRow label={NOTIF_LABELS.pushReviews} value={prefs.pushReviews} onChange={set("pushReviews")} disabled={!hydrated} />
       </SectionCard>
 
       <SectionLabel>Email</SectionLabel>
       <SectionCard>
-        <ToggleRow label="Weekly summary" value={prefs.emailWeekly} onChange={set("emailWeekly")} />
-        <ToggleRow label="Promotions & tips" value={prefs.emailPromotions} onChange={set("emailPromotions")} />
+        <ToggleRow label={NOTIF_LABELS.emailWeekly} value={prefs.emailWeekly} onChange={set("emailWeekly")} disabled={!hydrated} />
+        <ToggleRow label={NOTIF_LABELS.emailPromotions} value={prefs.emailPromotions} onChange={set("emailPromotions")} disabled={!hydrated} />
       </SectionCard>
 
       <SectionLabel>SMS</SectionLabel>
       <SectionCard>
-        <ToggleRow label="Urgent alerts only" value={prefs.smsUrgent} onChange={set("smsUrgent")} />
+        <ToggleRow label={NOTIF_LABELS.smsUrgent} value={prefs.smsUrgent} onChange={set("smsUrgent")} disabled={!hydrated} />
       </SectionCard>
     </SubpageShell>
   );
@@ -202,10 +246,12 @@ function ToggleRow({
   label,
   value,
   onChange,
+  disabled,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <SettingsRow
@@ -213,7 +259,7 @@ function ToggleRow({
       label={label}
       hideChevron
       asStatic
-      right={<Switch checked={value} onCheckedChange={onChange} />}
+      right={<Switch checked={value} onCheckedChange={onChange} disabled={disabled} />}
     />
   );
 }
