@@ -32,6 +32,28 @@ export interface PrivacyPrefs {
   messagePolicy: MessagePolicy;
 }
 
+/** Structured service item: name (must be from VALID_SERVICES), duration in minutes, price in USD. */
+export interface ServiceItem {
+  id: string;
+  name: string;
+  durationMin: number;
+  priceUsd: number;
+}
+
+/** Weekly availability — one window per day. `closed` = day off. */
+export interface DayWindow {
+  closed: boolean;
+  start: string; // "HH:MM" 24h
+  end: string;   // "HH:MM" 24h
+}
+export type WeeklyAvailability = Record<DayKey, DayWindow>;
+export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export const DAY_ORDER: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const DAY_LABEL: Record<DayKey, string> = {
+  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday",
+  fri: "Friday", sat: "Saturday", sun: "Sunday",
+};
+
 export interface ProfileData {
   // Identity
   fullName?: string;
@@ -44,12 +66,16 @@ export interface ProfileData {
   avatarDataUrl?: string;
   coverDataUrl?: string;
   // Storefront
-  services: string[];          // chosen Service slugs (max 10 valid set)
+  /** Legacy: list of service names (display only). Source of truth is `serviceMenu`. */
+  services: string[];
+  serviceMenu: ServiceItem[];
   portfolio: string[];         // image data URLs
   // Reviews aggregate (mock)
   rating?: number;
   reviewCount?: number;
-  // Availability summary text (real schedule lives elsewhere)
+  // Availability
+  availability: WeeklyAvailability;
+  /** Derived/legacy summary string. Kept for backward-compat with existing UI. */
   availabilitySummary?: string;
   // Payouts
   bankName?: string;
