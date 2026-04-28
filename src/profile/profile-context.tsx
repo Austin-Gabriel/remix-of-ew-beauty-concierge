@@ -1,10 +1,23 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAuth } from "@/auth/auth-context";
+import {
+  hydrateProfileFromCloud,
+  persistPreferences,
+  persistProfile,
+  persistServices,
+  persistAvailability,
+  persistPortfolio,
+} from "./profile-cloud-sync";
 
 /**
  * Profile-domain state — Pro identity, storefront prefs, and app settings.
- * Mock-first: persisted to localStorage so toggles survive reload. In
- * production this syncs to Lovable Cloud (profiles, professionals, services,
- * portfolio_items, settings tables).
+ *
+ * Two-tier persistence:
+ *   1. Signed-in users (real userId): hydrated from + written through to
+ *      Lovable Cloud (profiles, professionals, services, portfolio_items,
+ *      availability_blocks, blocked_pairs, pro_preferences).
+ *   2. Demo / unauthenticated sessions: persisted to localStorage so the
+ *      pre-auth flows ("Skip to demo") still feel real.
  */
 
 export type ThemeChoice = "system" | "light" | "dark";
