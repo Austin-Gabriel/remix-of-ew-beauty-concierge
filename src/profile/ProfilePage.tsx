@@ -161,6 +161,7 @@ export function ProfilePage() {
 
       <ProfileBottomTabs />
     </div>
+    </HomeShell>
   );
 }
 
