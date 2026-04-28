@@ -13,9 +13,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  UserCircle2,
+  Image as ImageIcon,
+  KeyRound,
+  ShieldCheck,
+  Bell,
+  Languages,
+  SunMoon,
+  Lock,
+  CreditCard,
+  BookOpen,
+  FileText,
+  LifeBuoy,
+} from "lucide-react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { HomeShell } from "@/home/home-shell";
+import { SectionLabel } from "@/profile/components/SectionLabel";
+import { SectionCard } from "@/profile/components/SectionCard";
+import { SettingsRow } from "@/profile/components/SettingsRow";
+
+const NAVY_MUTED = "rgba(6,28,39,0.55)";
 
 export function SettingsPage() {
   const { reset, email } = useAuth();
@@ -83,21 +103,8 @@ export function SettingsPage() {
     }
   };
 
-  const displayName = profile.name || "Amara Osei";
-  const handle =
-    displayName.trim().length > 0
-      ? `@${displayName
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, ".")
-          .replace(/^\.+|\.+$/g, "")}`
-      : "@amara.osei";
   const appearanceLabel =
-    devState.theme === "system"
-      ? "System"
-      : devState.theme === "light"
-        ? "Light"
-        : "Dark";
+    devState.theme === "system" ? "System" : devState.theme === "light" ? "Light" : "Dark";
   const languageLabel =
     locale === "yo"
       ? "Yorùbá"
@@ -106,7 +113,7 @@ export function SettingsPage() {
         : locale === "es"
           ? "Español"
           : "English";
-  const payoutsLabel = profile.payout.method ? "Manage" : "Setup";
+  const payoutsLabel = profile.payout.method ?? "Connect your account";
   const portfolioCount = profile.portfolio.length;
 
   const signOut = async () => {
@@ -130,172 +137,206 @@ export function SettingsPage() {
     });
   };
 
+  const Right = ({ children }: { children: React.ReactNode }) => (
+    <span className="text-[14px] font-medium" style={{ color: NAVY_MUTED }}>
+      {children}
+    </span>
+  );
+
+  const RightAccent = ({ children }: { children: React.ReactNode }) => (
+    <span className="text-[14px] font-semibold" style={{ color: "#FF823F" }}>
+      {children}
+    </span>
+  );
+
   return (
-    <>
-      <div
-        data-theme="dark"
-        className="min-h-screen w-full"
+    <HomeShell noTabBarSpacing>
+      <header
+        className="sticky top-0 z-10 flex items-center px-2 py-2"
         style={{
           backgroundColor: "var(--eb-bg)",
-          color: "var(--eb-fg)",
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)",
+          borderBottom: "1px solid var(--eb-hairline)",
         }}
       >
-        <div className="px-5 pt-3 pb-4">
-          <button
-            type="button"
-            onClick={goBack}
-            aria-label="Back to Profile"
-            className="mb-3 flex items-center gap-2 rounded-md py-1 transition-opacity active:opacity-60"
-            style={{ color: "var(--eb-fg)" }}
-          >
-            <ChevronLeft size={24} strokeWidth={2.2} />
-            <span className="text-[21px] font-semibold">Settings</span>
-          </button>
-          <p className="max-w-[18rem] text-[15px] leading-8" style={{ color: "var(--eb-fg-muted)" }}>
-            Manage your account, preferences, and how Ewà Biz works for you.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label="Back to Profile"
+          className="flex items-center gap-1 rounded-md px-2 py-2 transition-opacity active:opacity-60"
+          style={{ color: "var(--eb-fg)" }}
+        >
+          <ChevronLeft size={22} strokeWidth={2} />
+          <span className="text-[15px] font-medium">Back</span>
+        </button>
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-[16px] font-semibold">Settings</h1>
+      </header>
 
-        {profile.loading ? (
-          <div className="px-5 pb-8">
-            <SettingsLoadingBlock />
-          </div>
-        ) : (
-          <>
-            <SettingsSection letter="A" title="Account" trailing={handle}>
-              <SettingsListRow
-                index="01"
-                label="Edit profile"
-                sublabel="Bio, services, photos"
-                actionLabel="Open"
-                onClick={() => navigate({ to: "/profile/settings/edit-profile" })}
-              />
-              <SettingsListRow
-                index="02"
-                label="Edit portfolio"
-                sublabel={`${portfolioCount} of 24 photos`}
-                onClick={() => navigate({ to: "/profile/settings/edit-portfolio" })}
-              />
-              <SettingsListRow
-                index="03"
-                label="Change password"
-                sublabel="Last changed 4 months ago"
-                onClick={() => navigate({ to: "/profile/settings/change-password" })}
-              />
-              <SettingsListRow
-                index="04"
-                label="Two-factor authentication"
-                sublabel="Add an extra layer to your sign-in"
-                badge="Soon"
-                onClick={() =>
-                  toast("Two-factor authentication", {
-                    description: "This flow is next up and not live yet.",
-                  })
-                }
-              />
-            </SettingsSection>
-
-            <SettingsSection letter="B" title="Preferences">
-              <SettingsListRow
-                index="05"
-                label="Notifications"
-                sublabel="Bookings, messages, payments"
-                actionLabel={prefSummary.notifications}
-                onClick={() => navigate({ to: "/profile/settings/notifications" })}
-              />
-              <SettingsListRow
-                index="06"
-                label="Language"
-                sublabel="Choose your preferred language"
-                actionLabel={languageLabel}
-                onClick={() => navigate({ to: "/profile/settings/language" })}
-              />
-              <SettingsListRow
-                index="07"
-                label="Appearance"
-                sublabel="Theme and text size"
-                actionLabel={appearanceLabel}
-                onClick={() => navigate({ to: "/profile/settings/appearance" })}
-              />
-              <SettingsListRow
-                index="08"
-                label="Privacy"
-                sublabel={prefSummary.privacy}
-                onClick={() => navigate({ to: "/profile/settings/privacy" })}
-              />
-            </SettingsSection>
-
-            <SettingsSection letter="C" title="Money">
-              <SettingsListRow
-                index="09"
-                label="Payouts & banking"
-                sublabel={profile.payout.method ?? "Connect your account"}
-                actionLabel={payoutsLabel}
-                actionTone={profile.payout.method ? "default" : "accent"}
-                onClick={() => navigate({ to: "/profile/payouts-and-banking" })}
-              />
-            </SettingsSection>
-
-            <SettingsSection letter="D" title="About">
-              <SettingsListRow
-                index="10"
-                label="How Ewà Biz works"
-                sublabel="The Pro's guide to the platform"
-                onClick={() => navigate({ to: "/profile/settings/how-it-works" })}
-              />
-              <SettingsListRow
-                index="11"
-                label="Terms of service"
-                sublabel="Updated 12 March 2026"
-                onClick={() => navigate({ to: "/profile/settings/terms-of-service" })}
-              />
-              <SettingsListRow
-                index="12"
-                label="Help & support"
-                sublabel="FAQs, contact, safety"
-                onClick={() => navigate({ to: "/profile/help-and-support" })}
-              />
-              <div className="flex items-center justify-between px-5 py-8 text-[15px]">
-                <span style={{ color: "var(--eb-fg)" }}>App version</span>
-                <span style={{ color: "var(--eb-fg-muted)" }}>1.0 · 2026.04</span>
-              </div>
-            </SettingsSection>
-
-            <div className="px-5 pt-6">
-              <button
-                type="button"
-                onClick={() => setSignOutOpen(true)}
-                disabled={signingOut}
-                className="w-full rounded-[22px] py-4 text-[16px] font-medium transition-opacity active:opacity-70 disabled:opacity-50"
-                style={{
-                  backgroundColor: "transparent",
-                  border: "1px solid var(--eb-hairline)",
-                  color: "var(--eb-fg)",
-                }}
-              >
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(true)}
-                className="mt-4 w-full rounded-[22px] py-4 text-[16px] font-medium transition-opacity active:opacity-70"
-                style={{
-                  backgroundColor: "transparent",
-                  border: "1px solid color-mix(in oklab, var(--eb-danger) 55%, var(--eb-hairline))",
-                  color: "var(--eb-danger)",
-                }}
-              >
-                Delete Ewà Biz account
-              </button>
-              <div className="pt-4 text-center text-[13px]" style={{ color: "var(--eb-fg-muted)" }}>
-                {email ?? "Signed in"}
-              </div>
-            </div>
-          </>
-        )}
+      <div className="px-4 pt-4 pb-2">
+        <h2
+          className="font-semibold tracking-tight"
+          style={{
+            color: "var(--eb-fg)",
+            fontSize: 22,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Settings
+        </h2>
+        <p
+          className="mt-1 text-[14px]"
+          style={{ color: "var(--eb-fg)", opacity: 0.6, maxWidth: 280 }}
+        >
+          Manage your account, preferences, and how Ewà Biz works for you.
+        </p>
       </div>
+
+      {profile.loading ? (
+        <div className="px-4 pb-8">
+          <SettingsLoadingBlock />
+        </div>
+      ) : (
+        <>
+          <SectionLabel>Account</SectionLabel>
+          <SectionCard>
+            <SettingsRow
+              icon={<UserCircle2 size={18} strokeWidth={1.8} />}
+              label="Edit profile"
+              sublabel="Bio, services, photos"
+              onClick={() => navigate({ to: "/profile/settings/edit-profile" })}
+            />
+            <SettingsRow
+              icon={<ImageIcon size={18} strokeWidth={1.8} />}
+              label="Edit portfolio"
+              sublabel={`${portfolioCount} of 24 photos`}
+              onClick={() => navigate({ to: "/profile/settings/edit-portfolio" })}
+            />
+            <SettingsRow
+              icon={<KeyRound size={18} strokeWidth={1.8} />}
+              label="Change password"
+              sublabel="Last changed 4 months ago"
+              onClick={() => navigate({ to: "/profile/settings/change-password" })}
+            />
+            <SettingsRow
+              icon={<ShieldCheck size={18} strokeWidth={1.8} />}
+              label="Two-factor authentication"
+              sublabel="Add an extra layer to your sign-in"
+              right={<Right>Soon</Right>}
+              onClick={() =>
+                toast("Two-factor authentication", {
+                  description: "This flow is next up and not live yet.",
+                })
+              }
+            />
+          </SectionCard>
+
+          <SectionLabel>Preferences</SectionLabel>
+          <SectionCard>
+            <SettingsRow
+              icon={<Bell size={18} strokeWidth={1.8} />}
+              label="Notifications"
+              sublabel="Bookings, messages, payments"
+              right={<Right>{prefSummary.notifications}</Right>}
+              onClick={() => navigate({ to: "/profile/settings/notifications" })}
+            />
+            <SettingsRow
+              icon={<Languages size={18} strokeWidth={1.8} />}
+              label="Language"
+              sublabel="Choose your preferred language"
+              right={<Right>{languageLabel}</Right>}
+              onClick={() => navigate({ to: "/profile/settings/language" })}
+            />
+            <SettingsRow
+              icon={<SunMoon size={18} strokeWidth={1.8} />}
+              label="Appearance"
+              sublabel="Theme and text size"
+              right={<Right>{appearanceLabel}</Right>}
+              onClick={() => navigate({ to: "/profile/settings/appearance" })}
+            />
+            <SettingsRow
+              icon={<Lock size={18} strokeWidth={1.8} />}
+              label="Privacy"
+              sublabel={prefSummary.privacy}
+              onClick={() => navigate({ to: "/profile/settings/privacy" })}
+            />
+          </SectionCard>
+
+          <SectionLabel>Money</SectionLabel>
+          <SectionCard>
+            <SettingsRow
+              icon={<CreditCard size={18} strokeWidth={1.8} />}
+              label="Payouts & banking"
+              sublabel={payoutsLabel}
+              right={
+                profile.payout.method ? (
+                  <Right>Manage</Right>
+                ) : (
+                  <RightAccent>Setup</RightAccent>
+                )
+              }
+              onClick={() => navigate({ to: "/profile/payouts-and-banking" })}
+            />
+          </SectionCard>
+
+          <SectionLabel>About</SectionLabel>
+          <SectionCard>
+            <SettingsRow
+              icon={<BookOpen size={18} strokeWidth={1.8} />}
+              label="How Ewà Biz works"
+              sublabel="The Pro's guide to the platform"
+              onClick={() => navigate({ to: "/profile/settings/how-it-works" })}
+            />
+            <SettingsRow
+              icon={<FileText size={18} strokeWidth={1.8} />}
+              label="Terms of service"
+              sublabel="Updated 12 March 2026"
+              onClick={() => navigate({ to: "/profile/settings/terms-of-service" })}
+            />
+            <SettingsRow
+              icon={<LifeBuoy size={18} strokeWidth={1.8} />}
+              label="Help & support"
+              sublabel="FAQs, contact, safety"
+              onClick={() => navigate({ to: "/profile/help-and-support" })}
+            />
+          </SectionCard>
+
+          <div className="mx-4 mt-3 flex items-center justify-between text-[13px]" style={{ color: "var(--eb-fg)", opacity: 0.55 }}>
+            <span>App version</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>1.0 · 2026.04</span>
+          </div>
+
+          <div className="px-4 pt-6">
+            <button
+              type="button"
+              onClick={() => setSignOutOpen(true)}
+              disabled={signingOut}
+              className="w-full rounded-2xl py-3.5 text-[15px] font-semibold transition-opacity active:opacity-70 disabled:opacity-50"
+              style={{
+                backgroundColor: "transparent",
+                border: "1px solid var(--eb-hairline)",
+                color: "var(--eb-fg)",
+              }}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="mt-3 w-full rounded-2xl py-3.5 text-[15px] font-semibold transition-opacity active:opacity-70"
+              style={{
+                backgroundColor: "transparent",
+                border: "1px solid rgba(185,28,28,0.55)",
+                color: "#B91C1C",
+              }}
+            >
+              Delete Ewà Biz account
+            </button>
+            <div className="pt-4 text-center text-[13px]" style={{ color: "var(--eb-fg)", opacity: 0.55 }}>
+              {email ?? "Signed in"}
+            </div>
+          </div>
+        </>
+      )}
 
       <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
         <AlertDialogContent>
@@ -334,126 +375,24 @@ export function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
-}
-
-function SettingsSection({
-  letter,
-  title,
-  trailing,
-  children,
-}: {
-  letter: string;
-  title: string;
-  trailing?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section style={{ borderTop: "1px solid var(--eb-hairline)" }}>
-      <div className="flex items-center justify-between px-5 pt-10 pb-4">
-        <div className="flex items-center gap-6">
-          <span className="text-[18px] font-semibold" style={{ color: "var(--eb-orange)" }}>
-            {letter}
-          </span>
-          <h2 className="text-[18px] font-semibold uppercase tracking-[0.22em]">{title}</h2>
-        </div>
-        {trailing ? (
-          <span className="text-[14px]" style={{ color: "var(--eb-fg-muted)" }}>
-            {trailing}
-          </span>
-        ) : null}
-      </div>
-      <div>{children}</div>
-    </section>
-  );
-}
-
-function SettingsListRow({
-  index,
-  label,
-  sublabel,
-  actionLabel,
-  actionTone = "default",
-  badge,
-  onClick,
-}: {
-  index: string;
-  label: string;
-  sublabel: string;
-  actionLabel?: string;
-  actionTone?: "default" | "accent";
-  badge?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="grid w-full grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-4 px-5 py-5 text-left transition-colors active:bg-[var(--eb-surface-2)]"
-      style={{
-        borderBottom: "1px solid var(--eb-hairline)",
-      }}
-    >
-      <span className="pt-1 text-[16px] tabular-nums" style={{ color: "var(--eb-fg-muted)" }}>
-        {index}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[22px] font-medium leading-[1.15]" style={{ color: "var(--eb-fg)" }}>
-          {label}
-        </span>
-        <span className="mt-2 block text-[17px] leading-[1.25]" style={{ color: "var(--eb-fg-muted)" }}>
-          {sublabel}
-        </span>
-      </span>
-      <span className="flex items-center gap-3 pl-2">
-        {badge ? (
-          <span
-            className="rounded-[10px] px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em]"
-            style={{
-              border: "1px solid var(--eb-hairline)",
-              color: "var(--eb-fg-muted)",
-            }}
-          >
-            {badge}
-          </span>
-        ) : actionLabel ? (
-          <span
-            className="text-[17px] font-medium"
-            style={{
-              color: actionTone === "accent" ? "var(--eb-orange)" : "var(--eb-fg-muted)",
-            }}
-          >
-            {actionLabel}
-          </span>
-        ) : null}
-        <ChevronRight size={22} strokeWidth={1.8} style={{ color: "var(--eb-fg-muted)" }} />
-      </span>
-    </button>
+    </HomeShell>
   );
 }
 
 function SettingsLoadingBlock() {
   return (
-    <div style={{ borderTop: "1px solid var(--eb-hairline)" }}>
-      <div className="px-0 pt-10 pb-4">
-        <div className="flex items-center gap-6 px-0">
-          <SkeletonBar w={14} h={22} />
-          <SkeletonBar w={132} h={18} />
-        </div>
-      </div>
+    <div>
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-4 px-0 py-5"
-          style={{ borderBottom: "1px solid var(--eb-hairline)" }}
+          className="mt-4 rounded-2xl px-4 py-4"
+          style={{
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(6,28,39,0.10)",
+          }}
         >
-          <SkeletonBar w={24} h={14} />
-          <div>
-            <SkeletonBar w={160} h={18} />
-            <SkeletonBar w={210} h={14} mt={10} />
-          </div>
-          <SkeletonBar w={54} h={16} />
+          <SkeletonBar w={120} h={14} />
+          <SkeletonBar w={210} h={12} mt={8} />
         </div>
       ))}
     </div>
@@ -469,7 +408,7 @@ function SkeletonBar({ w, h, mt = 0 }: { w: number; h: number; mt?: number }) {
         width: w,
         height: h,
         marginTop: mt,
-        backgroundColor: "var(--eb-surface-2)",
+        backgroundColor: "rgba(6,28,39,0.08)",
       }}
     />
   );
