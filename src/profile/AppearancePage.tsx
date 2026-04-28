@@ -268,9 +268,42 @@ function ToggleRow({
 /* ------------------------------------------------------------------ */
 /* PrivacyPage                                                        */
 /* ------------------------------------------------------------------ */
+const PRIVACY_KEY = "ewa.privacyPrefs";
+const DEFAULT_PRIVACY = { showLocation: true, showContact: false };
+type PrivacyPrefs = typeof DEFAULT_PRIVACY;
+
+function loadPrivacy(): PrivacyPrefs {
+  if (typeof window === "undefined") return DEFAULT_PRIVACY;
+  try {
+    const raw = window.localStorage.getItem(PRIVACY_KEY);
+    if (!raw) return DEFAULT_PRIVACY;
+    return { ...DEFAULT_PRIVACY, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_PRIVACY;
+  }
+}
+
 export function PrivacyPage() {
-  const [showLocation, setShowLocation] = useState(true);
-  const [showContact, setShowContact] = useState(false);
+  const [prefs, setPrefs] = useState<PrivacyPrefs>(DEFAULT_PRIVACY);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setPrefs(loadPrivacy());
+    setHydrated(true);
+  }, []);
+
+  const update = (k: keyof PrivacyPrefs, label: string) => (v: boolean) => {
+    setPrefs((p) => {
+      const next = { ...p, [k]: v };
+      try {
+        window.localStorage.setItem(PRIVACY_KEY, JSON.stringify(next));
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
+    toast.success(`${label} ${v ? "on" : "off"}`);
+  };
 
   return (
     <SubpageShell title="Privacy">
