@@ -185,6 +185,10 @@ function HomePage() {
               navigate({ to: "/earnings" });
               return;
             }
+            if (k === "profile") {
+              navigate({ to: "/profile" });
+              return;
+            }
             setActiveTab(k);
           }}
           badge={
@@ -196,11 +200,6 @@ function HomePage() {
           }
         />
       ) : null}
-      <ProfileSheet
-        open={!isHardGate && !incomingTakeover && activeTab === "profile"}
-        onClose={() => setActiveTab("home")}
-      />
-
       {incomingTakeover ? <LifecycleSurface /> : null}
     </HomeShell>
   );
