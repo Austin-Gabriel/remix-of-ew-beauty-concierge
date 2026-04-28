@@ -565,3 +565,68 @@ function Group({
     </section>
   );
 }
+
+function ToggleGroup({
+  title,
+  items,
+  onToggle,
+}: {
+  title: string;
+  items: { key: string; label: string; value: boolean }[];
+  onToggle: (key: string, value: boolean) => void;
+}) {
+  return (
+    <section className="mt-5">
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: "1.4px",
+          textTransform: "uppercase",
+          opacity: 0.55,
+          fontWeight: 700,
+          marginBottom: 8,
+        }}
+      >
+        {title}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onToggle(item.key, !item.value)}
+            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors"
+            style={{
+              backgroundColor: item.value ? "rgba(255,130,63,0.10)" : "rgba(240,235,216,0.03)",
+              border: `1px solid ${item.value ? "rgba(255,130,63,0.45)" : "rgba(240,235,216,0.08)"}`,
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 500, color: "#F0EBD8" }}>{item.label}</span>
+            <span
+              aria-hidden
+              className="relative rounded-full transition-colors"
+              style={{
+                width: 34,
+                height: 20,
+                backgroundColor: item.value ? ORANGE : "rgba(240,235,216,0.18)",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left: item.value ? 16 : 2,
+                  width: 16,
+                  height: 16,
+                  borderRadius: 9999,
+                  backgroundColor: "#F0EBD8",
+                  transition: "left 160ms ease",
+                }}
+              />
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
