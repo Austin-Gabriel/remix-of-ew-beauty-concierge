@@ -183,6 +183,9 @@ export function DevStateToggle() {
     setBlockedTime,
     setAvailability,
     setRescheduleState,
+    setProfileCompleteness,
+    setProfileVerification,
+    setProfileSection,
     reset,
   } = useDevState();
   const reschedule = useReschedule();
