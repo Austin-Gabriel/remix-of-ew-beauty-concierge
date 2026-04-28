@@ -373,6 +373,9 @@ export function useDevState(): Ctx {
       setAvailability: () => {},
       setAvailabilityOverride: () => {},
       setRescheduleState: () => {},
+      setProfileCompleteness: () => {},
+      setProfileVerification: () => {},
+      setProfileSection: () => {},
       reset: () => {},
     };
   }
