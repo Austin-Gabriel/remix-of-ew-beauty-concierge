@@ -9,6 +9,7 @@ import { CustomerViewModal } from "@/profile/components/CustomerViewModal";
 import { useProfile } from "@/profile/hooks/useProfile";
 import { useT } from "@/profile/i18n/SettingsI18nProvider";
 import { BottomTabs, type TabKey } from "@/home/bottom-tabs";
+import { HomeShell } from "@/home/home-shell";
 import {
   Scissors,
   Image as ImageIcon,
