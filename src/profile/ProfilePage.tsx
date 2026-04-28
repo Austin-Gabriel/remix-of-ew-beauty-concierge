@@ -64,6 +64,7 @@ export function ProfilePage() {
   return (
     <HomeShell noTabBarSpacing>
       <div
+        data-theme="dark"
         className="min-h-screen w-full"
         style={{
           backgroundColor: "var(--eb-bg)",
