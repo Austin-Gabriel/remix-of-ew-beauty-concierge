@@ -69,22 +69,22 @@ const EMPTY: ProfileSnapshot = {
 
 const SPARSE: ProfileSnapshot = {
   loading: false,
-  name: "Amara Osei",
+  name: "Aaliyah Bennett",
   role: "Stylist",
-  neighborhood: "",
+  neighborhood: "Brooklyn, NY",
   avatarUrl: null,
-  rating: null,
-  reviewCount: 0,
+  rating: 4.93,
+  reviewCount: 128,
   services: [
     { id: "s1", name: "Silk press", priceUsd: 120, durationMinutes: 90 },
-    { id: "s2", name: "Wash & style", priceUsd: 85, durationMinutes: 60 },
-    { id: "s3", name: "Trim & treatment", priceUsd: 95, durationMinutes: 45 },
+    { id: "s2", name: "Wash and go", priceUsd: 85, durationMinutes: 60 },
+    { id: "s3", name: "Trim", priceUsd: 95, durationMinutes: 45 },
   ],
   portfolio: [],
   recentReviews: [],
   socials: [],
   availability: { summary: "Mon–Sat · 9 AM – 7 PM" },
-  payout: { method: null },
+  payout: { method: "Chase ··5421" },
   hasUnreadNotifications: false,
 };
 
