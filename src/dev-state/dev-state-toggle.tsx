@@ -16,6 +16,9 @@ import {
   type DevBlockedTime,
   type DevAvailability,
   type DevRescheduleState,
+  type DevProfileCompleteness,
+  type DevProfileVerification,
+  type DevProfileSections,
 } from "@/dev-state/dev-state-context";
 import { useReschedule } from "@/calendar/reschedule-context";
 import { ALL_BOOKINGS } from "@/data/mock-bookings";
