@@ -1,10 +1,23 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAuth } from "@/auth/auth-context";
+import {
+  hydrateProfileFromCloud,
+  persistPreferences,
+  persistProfile,
+  persistServices,
+  persistAvailability,
+  persistPortfolio,
+} from "./profile-cloud-sync";
 
 /**
  * Profile-domain state — Pro identity, storefront prefs, and app settings.
- * Mock-first: persisted to localStorage so toggles survive reload. In
- * production this syncs to Lovable Cloud (profiles, professionals, services,
- * portfolio_items, settings tables).
+ *
+ * Two-tier persistence:
+ *   1. Signed-in users (real userId): hydrated from + written through to
+ *      Lovable Cloud (profiles, professionals, services, portfolio_items,
+ *      availability_blocks, blocked_pairs, pro_preferences).
+ *   2. Demo / unauthenticated sessions: persisted to localStorage so the
+ *      pre-auth flows ("Skip to demo") still feel real.
  */
 
 export type ThemeChoice = "system" | "light" | "dark";
@@ -239,11 +252,32 @@ function write(d: ProfileData) {
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
+  const { userId } = useAuth();
   const [data, setData] = useState<ProfileData>(DEFAULT_PROFILE);
+  const lastUserId = useRef<string | null>(null);
+  // Track which slices have changed since last cloud-write so we know what to persist.
+  const dirty = useRef<{ prefs?: boolean; profile?: boolean; menu?: boolean; avail?: boolean; portfolio?: boolean }>({});
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Initial hydrate: cloud if signed in, localStorage otherwise.
   useEffect(() => {
-    setData(read());
-  }, []);
+    if (userId && userId !== lastUserId.current) {
+      lastUserId.current = userId;
+      // Seed instantly from local cache so the UI doesn't flicker, then refresh from cloud.
+      setData(read());
+      hydrateProfileFromCloud(userId)
+        .then((cloud) => {
+          setData(cloud);
+          write(cloud);
+        })
+        .catch(() => {
+          // network failure → keep local cache
+        });
+    } else if (!userId) {
+      lastUserId.current = null;
+      setData(read());
+    }
+  }, [userId]);
 
   // Apply theme + text size to documentElement so it sticks across pages.
   useEffect(() => {
@@ -259,29 +293,66 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     root.setAttribute("dir", lang?.rtl ? "rtl" : "ltr");
   }, [data.theme, data.textSize, data.language]);
 
+  /** Coalesced cloud flush — runs ~250ms after the last patch. */
+  const scheduleFlush = useCallback((latest: ProfileData) => {
+    if (!userId) return;
+    if (flushTimer.current) clearTimeout(flushTimer.current);
+    flushTimer.current = setTimeout(() => {
+      const tasks: Promise<unknown>[] = [];
+      if (dirty.current.prefs) tasks.push(persistPreferences(userId, latest));
+      if (dirty.current.profile) tasks.push(persistProfile(userId, latest));
+      if (dirty.current.menu) tasks.push(persistServices(userId, latest.serviceMenu));
+      if (dirty.current.avail) tasks.push(persistAvailability(userId, latest.availability));
+      if (dirty.current.portfolio) tasks.push(persistPortfolio(userId, latest.portfolio));
+      dirty.current = {};
+      Promise.allSettled(tasks);
+    }, 250);
+  }, [userId]);
+
+  // Categorise which slice a `patch` touches so we only round-trip what changed.
+  const markDirty = (next: Partial<ProfileData>) => {
+    const k = Object.keys(next);
+    const prefsKeys = ["theme", "textSize", "language", "muteUntilIso"];
+    const profileKeys = ["fullName", "tagline", "handle", "neighborhood", "baseAddress", "instagram", "tiktok", "avatarDataUrl", "coverDataUrl", "yearsExperience", "travelRadiusMi"];
+    if (k.some((x) => prefsKeys.includes(x))) dirty.current.prefs = true;
+    if (k.some((x) => profileKeys.includes(x))) dirty.current.profile = true;
+    if (k.includes("serviceMenu")) dirty.current.menu = true;
+    if (k.includes("availability")) dirty.current.avail = true;
+    if (k.includes("portfolio")) dirty.current.portfolio = true;
+    if (k.includes("blocked")) {
+      // blocked_pairs writes are handled per-action elsewhere; nothing here
+    }
+  };
+
   const patch = useCallback((next: Partial<ProfileData>) => {
     setData((prev) => {
       const merged = { ...prev, ...next };
       write(merged);
+      markDirty(next);
+      scheduleFlush(merged);
       return merged;
     });
-  }, []);
+  }, [scheduleFlush]);
 
   const patchNotifications = useCallback((next: Partial<NotificationPrefs>) => {
     setData((prev) => {
       const merged = { ...prev, notifications: { ...prev.notifications, ...next } };
       write(merged);
+      dirty.current.prefs = true;
+      scheduleFlush(merged);
       return merged;
     });
-  }, []);
+  }, [scheduleFlush]);
 
   const patchPrivacy = useCallback((next: Partial<PrivacyPrefs>) => {
     setData((prev) => {
       const merged = { ...prev, privacy: { ...prev.privacy, ...next } };
       write(merged);
+      dirty.current.prefs = true;
+      scheduleFlush(merged);
       return merged;
     });
-  }, []);
+  }, [scheduleFlush]);
 
   const reset = useCallback(() => {
     write(DEFAULT_PROFILE);

@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { HomeShell, HOME_SANS, useHomeTheme } from "@/home/home-shell";
 import { PageHeader, SectionLabel } from "./profile-ui";
 import { monogramOf, useProfile } from "./profile-context";
+import { useAuth } from "@/auth/auth-context";
+import { uploadAvatar } from "./profile-cloud-sync";
 
 /**
  * /profile/settings/edit-profile — name, tagline, neighborhood, address,
@@ -37,10 +39,21 @@ export function EditProfilePage() {
   }, [data.fullName, data.tagline, data.handle, data.neighborhood, data.baseAddress, data.travelRadiusMi, data.yearsExperience, data.avatarDataUrl]);
 
   const fileRef = useRef<HTMLInputElement>(null);
-  const onPickAvatar = (file: File) => {
+  const { userId } = useAuth();
+  const onPickAvatar = async (file: File) => {
+    // Optimistic local preview
     const reader = new FileReader();
     reader.onload = () => setAvatarDataUrl(String(reader.result));
     reader.readAsDataURL(file);
+    // Persist to Storage if signed in; swap preview for public URL on success.
+    if (userId) {
+      try {
+        const url = await uploadAvatar(userId, file);
+        setAvatarDataUrl(url);
+      } catch {
+        toast("Couldn't upload photo. Saved locally.");
+      }
+    }
   };
 
   const dirty =

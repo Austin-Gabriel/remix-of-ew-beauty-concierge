@@ -1044,6 +1044,81 @@ export type Database = {
         }
         Relationships: []
       }
+      pro_preferences: {
+        Row: {
+          created_at: string
+          language: string
+          message_policy: string
+          mute_until: string | null
+          notify_booking_cancelled: boolean
+          notify_booking_confirmed: boolean
+          notify_booking_reminders: boolean
+          notify_client_reviews: boolean
+          notify_marketing_features: boolean
+          notify_marketing_tips: boolean
+          notify_mentions: boolean
+          notify_new_messages: boolean
+          notify_new_request: boolean
+          notify_payout_failed: boolean
+          notify_payouts_processed: boolean
+          search_visible: boolean
+          show_last_active: boolean
+          show_online_status: boolean
+          text_size: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          language?: string
+          message_policy?: string
+          mute_until?: string | null
+          notify_booking_cancelled?: boolean
+          notify_booking_confirmed?: boolean
+          notify_booking_reminders?: boolean
+          notify_client_reviews?: boolean
+          notify_marketing_features?: boolean
+          notify_marketing_tips?: boolean
+          notify_mentions?: boolean
+          notify_new_messages?: boolean
+          notify_new_request?: boolean
+          notify_payout_failed?: boolean
+          notify_payouts_processed?: boolean
+          search_visible?: boolean
+          show_last_active?: boolean
+          show_online_status?: boolean
+          text_size?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          language?: string
+          message_policy?: string
+          mute_until?: string | null
+          notify_booking_cancelled?: boolean
+          notify_booking_confirmed?: boolean
+          notify_booking_reminders?: boolean
+          notify_client_reviews?: boolean
+          notify_marketing_features?: boolean
+          notify_marketing_tips?: boolean
+          notify_mentions?: boolean
+          notify_new_messages?: boolean
+          notify_new_request?: boolean
+          notify_payout_failed?: boolean
+          notify_payouts_processed?: boolean
+          search_visible?: boolean
+          show_last_active?: boolean
+          show_online_status?: boolean
+          text_size?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pro_reviews: {
         Row: {
           body: string | null
@@ -1141,19 +1216,26 @@ export type Database = {
           background_check_status:
             | Database["public"]["Enums"]["background_check_status"]
             | null
+          base_address: string | null
           base_location: unknown
           bio: string | null
           buffer_minutes: number
           can_accept_bookings: boolean
+          cover_url: string | null
           created_at: string
+          handle: string | null
           id: string
           identity_verified_at: string | null
+          instagram: string | null
           is_online: boolean
           is_verified: boolean
+          neighborhood: string | null
           onboarded_at: string | null
           service_radius_km: number
           suspended_at: string | null
           suspended_reason: string | null
+          tagline: string | null
+          tiktok: string | null
           total_bookings: number
           updated_at: string
           years_experience: number | null
@@ -1164,19 +1246,26 @@ export type Database = {
           background_check_status?:
             | Database["public"]["Enums"]["background_check_status"]
             | null
+          base_address?: string | null
           base_location?: unknown
           bio?: string | null
           buffer_minutes?: number
           can_accept_bookings?: boolean
+          cover_url?: string | null
           created_at?: string
+          handle?: string | null
           id: string
           identity_verified_at?: string | null
+          instagram?: string | null
           is_online?: boolean
           is_verified?: boolean
+          neighborhood?: string | null
           onboarded_at?: string | null
           service_radius_km?: number
           suspended_at?: string | null
           suspended_reason?: string | null
+          tagline?: string | null
+          tiktok?: string | null
           total_bookings?: number
           updated_at?: string
           years_experience?: number | null
@@ -1187,19 +1276,26 @@ export type Database = {
           background_check_status?:
             | Database["public"]["Enums"]["background_check_status"]
             | null
+          base_address?: string | null
           base_location?: unknown
           bio?: string | null
           buffer_minutes?: number
           can_accept_bookings?: boolean
+          cover_url?: string | null
           created_at?: string
+          handle?: string | null
           id?: string
           identity_verified_at?: string | null
+          instagram?: string | null
           is_online?: boolean
           is_verified?: boolean
+          neighborhood?: string | null
           onboarded_at?: string | null
           service_radius_km?: number
           suspended_at?: string | null
           suspended_reason?: string | null
+          tagline?: string | null
+          tiktok?: string | null
           total_bookings?: number
           updated_at?: string
           years_experience?: number | null
