@@ -7,6 +7,8 @@ import { KycProvider } from "@/onboarding-states/kyc/kyc-context";
 import { DevStateProvider } from "@/dev-state/dev-state-context";
 import { DevStateToggle } from "@/dev-state/dev-state-toggle";
 import { RescheduleProvider } from "@/calendar/reschedule-context";
+import { ProfileProvider } from "@/profile/profile-context";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -87,8 +89,11 @@ function RootComponent() {
         <OnboardingProvider>
           <KycProvider>
             <RescheduleProvider>
-              <Outlet />
-              <DevStateToggle />
+              <ProfileProvider>
+                <Outlet />
+                <DevStateToggle />
+                <Toaster />
+              </ProfileProvider>
             </RescheduleProvider>
           </KycProvider>
         </OnboardingProvider>
