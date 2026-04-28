@@ -183,6 +183,15 @@ const DEFAULT_STATE: DevState = {
   availability: "auto",
   availabilityOverride: null,
   rescheduleState: "none",
+  profileCompleteness: "auto",
+  profileVerification: "auto",
+  profileSections: {
+    hideAvatar: false,
+    hideBio: false,
+    hidePortfolio: false,
+    hideReviews: false,
+    hideSocials: false,
+  },
 };
 
 const STORAGE_KEY = "ewa.devState.v1";
