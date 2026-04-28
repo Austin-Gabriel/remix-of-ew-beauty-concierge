@@ -69,28 +69,23 @@ const EMPTY: ProfileSnapshot = {
 
 const SPARSE: ProfileSnapshot = {
   loading: false,
-  name: "Aaliyah Carter",
+  name: "Amara Osei",
   role: "Stylist",
-  neighborhood: "Brooklyn",
+  neighborhood: "",
   avatarUrl: null,
-  rating: 4.7,
-  reviewCount: 12,
+  rating: null,
+  reviewCount: 0,
   services: [
     { id: "s1", name: "Silk press", priceUsd: 120, durationMinutes: 90 },
-    { id: "s2", name: "Wash & style", priceUsd: 75, durationMinutes: 60 },
+    { id: "s2", name: "Wash & style", priceUsd: 85, durationMinutes: 60 },
+    { id: "s3", name: "Trim & treatment", priceUsd: 95, durationMinutes: 45 },
   ],
-  portfolio: [
-    { id: "p1", imageUrl: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400", caption: null },
-    { id: "p2", imageUrl: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400", caption: null },
-    { id: "p3", imageUrl: "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=400", caption: null },
-  ],
-  recentReviews: [
-    { id: "r1", rating: 5, body: "Aaliyah is a pro. Showed up early, finished on time.", createdAt: "" },
-  ],
+  portfolio: [],
+  recentReviews: [],
   socials: [],
   availability: { summary: "Mon–Sat · 9 AM – 7 PM" },
   payout: { method: null },
-  hasUnreadNotifications: true,
+  hasUnreadNotifications: false,
 };
 
 const RICH: ProfileSnapshot = {
