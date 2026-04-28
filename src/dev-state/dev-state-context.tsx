@@ -319,6 +319,9 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
       setAvailability,
       setAvailabilityOverride,
       setRescheduleState,
+      setProfileCompleteness,
+      setProfileVerification,
+      setProfileSection,
       reset,
     }),
     [
@@ -339,6 +342,9 @@ export function DevStateProvider({ children }: { children: ReactNode }) {
       setAvailability,
       setAvailabilityOverride,
       setRescheduleState,
+      setProfileCompleteness,
+      setProfileVerification,
+      setProfileSection,
       reset,
     ],
   );
