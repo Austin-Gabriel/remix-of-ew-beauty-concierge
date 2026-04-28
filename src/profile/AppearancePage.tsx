@@ -12,7 +12,7 @@ import { SettingsRow } from "@/profile/components/SettingsRow";
 /* AppearancePage                                                     */
 /* ------------------------------------------------------------------ */
 export function AppearancePage() {
-  const { state, updateState } = useDevState();
+  const { state, setTheme } = useDevState();
   const [textScale, setTextScale] = useState<"sm" | "md" | "lg">(() => {
     if (typeof window === "undefined") return "md";
     return (window.localStorage.getItem("ewa.textScale") as "sm" | "md" | "lg") || "md";
