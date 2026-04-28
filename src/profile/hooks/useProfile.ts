@@ -133,8 +133,10 @@ export function useProfile(): ProfileSnapshot {
     let cancelled = false;
 
     if (!userId) {
-      // No session — fall back to dev density mock.
-      const mock = dev.dataDensity === "rich" ? RICH : dev.dataDensity === "sparse" ? SPARSE : EMPTY;
+      // No session — fall back to dev density mock. Default to SPARSE so the
+      // page looks intentional in design QA without dev-state toggling.
+      const mock =
+        dev.dataDensity === "rich" ? RICH : dev.dataDensity === "empty" ? EMPTY : SPARSE;
       setData({ ...mock, loading: false });
       return;
     }
