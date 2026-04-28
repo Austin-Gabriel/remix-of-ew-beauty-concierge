@@ -37,10 +37,10 @@ export function SettingsRow({
     >
       <span
         aria-hidden
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
         style={{
           backgroundColor: "var(--eb-surface-2)",
-          color: destructive ? "var(--eb-danger)" : "var(--eb-fg)",
+          color: destructive ? "var(--eb-danger)" : "var(--eb-orange)",
         }}
       >
         {icon}
