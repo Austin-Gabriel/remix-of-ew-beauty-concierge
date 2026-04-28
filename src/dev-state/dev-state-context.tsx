@@ -214,6 +214,9 @@ interface Ctx {
   setAvailability: (v: DevAvailability) => void;
   setAvailabilityOverride: (v: DevAvailabilityOverride | null) => void;
   setRescheduleState: (v: DevRescheduleState) => void;
+  setProfileCompleteness: (v: DevProfileCompleteness) => void;
+  setProfileVerification: (v: DevProfileVerification) => void;
+  setProfileSection: (key: keyof DevProfileSections, value: boolean) => void;
   reset: () => void;
 }
 
